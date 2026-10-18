@@ -22,6 +22,7 @@
       "preload.js",
       "index.html",
       "app.js",
+      "editor.js",
       "layout.js",
       "templates/**"
     ],
@@ -48,6 +49,13 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "artifactName": "Open-Photo-Booth-${version}-${os}-${arch}.${ext}"
+  },
+  "author": "Open Photo Booth contributors",
+  "homepage": "https://github.com/robert-schmidt/open-photo-booth",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robert-schmidt/open-photo-booth.git"
   }
 }
