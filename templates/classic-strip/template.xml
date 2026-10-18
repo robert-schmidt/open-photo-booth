@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Template Name="Classic strip" Width="600" Height="1800" Resolution="300" BackgroundColor="#FFFFFFFF">
+  <Elements>
+    <Photo Name="Photo 1" PhotoNumber="1" Left="30" Top="30" Width="540" Height="360" ZIndex="0" />
+    <Photo Name="Photo 2" PhotoNumber="2" Left="30" Top="410" Width="540" Height="360" ZIndex="1" />
+    <Photo Name="Photo 3" PhotoNumber="3" Left="30" Top="790" Width="540" Height="360" ZIndex="2" />
+    <Photo Name="Photo 4" PhotoNumber="4" Left="30" Top="1170" Width="540" Height="360" ZIndex="3" />
+    <Text Name="Event" Text="{event}" FontName="Georgia" FontSize="56" FontColor="#FF222222" TextAlignment="Center" Left="0" Top="1555" Width="600" Height="120" ZIndex="10" />
+    <Text Name="Date" Text="{date}" FontName="Georgia" FontSize="32" FontColor="#FF777777" TextAlignment="Center" Left="0" Top="1680" Width="600" Height="70" ZIndex="11" />
+  </Elements>
+</Template>

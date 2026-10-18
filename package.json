@@ -1,0 +1,53 @@
+{
+  "name": "open-photo-booth",
+  "productName": "Open Photo Booth",
+  "version": "0.1.0",
+  "description": "Free, open-source photo booth for Windows and macOS.",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test.js",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "org.openphotobooth.app",
+    "productName": "Open Photo Booth",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "app.js",
+      "layout.js",
+      "templates/**"
+    ],
+    "mac": {
+      "category": "public.app-category.photography",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "NSCameraUsageDescription": "Open Photo Booth uses the camera to take photos of your guests."
+      },
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

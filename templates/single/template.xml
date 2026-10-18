@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Template Name="Single photo" Width="1800" Height="1200" Resolution="300" BackgroundColor="#FFFFFFFF">
+  <Elements>
+    <Photo Name="Photo 1" PhotoNumber="1" Left="40" Top="40" Width="1720" Height="1000" ZIndex="0" />
+    <Text Name="Event" Text="{event} · {date}" FontName="Georgia" FontSize="64" FontColor="#FF222222" TextAlignment="Center" Left="40" Top="1060" Width="1720" Height="110" ZIndex="10" />
+  </Elements>
+</Template>
