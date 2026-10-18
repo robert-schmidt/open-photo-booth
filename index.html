@@ -7,11 +7,13 @@
 <style>
   :root { color-scheme: dark; --accent: #ff4f6d; --panel: #1b1b1f; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden; user-select: none; }
   #video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   #video.mirror { transform: scaleX(-1); }
   .screen { position: fixed; inset: 0; display: none; }
-  body[data-screen="attract"] #attract, body[data-screen="capture"] #capture, body[data-screen="review"] #review { display: grid; }
+  body[data-screen="attract"] #attract, body[data-screen="capture"] #capture,
+  body[data-screen="review"] #review, body[data-screen="editor"] #editor { display: grid; }
 
   #attract { place-items: end center; padding-bottom: 10vh; text-align: center; cursor: pointer;
              background: linear-gradient(to top, rgba(0,0,0,.75), transparent 55%); }
@@ -31,34 +33,60 @@
   #result { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0,0,0,.7)); }
   .actions { display: flex; gap: 1.5rem; justify-content: center; }
   button { font: inherit; font-size: 1.4rem; padding: .8em 1.8em; border: 0; border-radius: 999px; background: #333; color: #fff; cursor: pointer; }
+  button:hover { background: #3d3d42; }
   button.primary { background: var(--accent); }
   button:disabled { opacity: .4; cursor: default; }
 
   #corner { position: fixed; top: 0; right: 0; width: 80px; height: 80px; z-index: 5; }
-  #toast { position: fixed; left: 50%; bottom: 3vh; transform: translateX(-50%); padding: .8em 1.4em; border-radius: 12px;
-           background: rgba(20,20,20,.92); font-size: 1.1rem; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 10; }
+  #toast { position: fixed; left: 50%; bottom: 3vh; transform: translateX(-50%); padding: .8em 1.4em; border-radius: 12px; max-width: 90vw;
+           background: rgba(20,20,20,.94); font-size: 1.1rem; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 10; }
   #toast.on { opacity: 1; }
 
-  dialog { width: min(760px, 94vw); max-height: 92vh; border: 0; border-radius: 16px; padding: 0; background: var(--panel); color: #fff; }
+  input, select, textarea { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid #444; background: #111; color: #fff; width: 100%; }
+  input[type="checkbox"] { width: 22px; height: 22px; justify-self: start; padding: 0; }
+  textarea { resize: vertical; }
+
+  dialog { width: min(780px, 94vw); max-height: 92vh; border: 0; border-radius: 16px; padding: 0; background: var(--panel); color: #fff; }
   dialog::backdrop { background: rgba(0,0,0,.7); }
   dialog form { padding: 24px 28px; }
-  dialog h2 { margin: 0 0 16px; }
-  .grid { display: grid; grid-template-columns: max-content 1fr; gap: 12px 16px; align-items: center; }
+  dialog h2 { margin: 0 0 8px; }
+  dialog button { font-size: 1rem; padding: .6em 1.2em; }
+  .grid { display: grid; grid-template-columns: max-content 1fr; gap: 10px 16px; align-items: center; }
   .grid label { color: #bbb; }
+  .grid h3 { grid-column: 1 / -1; margin: 14px 0 0; font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
   .row { display: flex; gap: 8px; }
   .row > :first-child { flex: 1; min-width: 0; }
-  input, select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid #444; background: #111; color: #fff; width: 100%; }
-  input[type="checkbox"] { width: 22px; height: 22px; justify-self: start; }
-  dialog button { font-size: 1rem; padding: .6em 1.2em; }
+  #preview { grid-column: 2; max-height: 220px; max-width: 100%; justify-self: start; border-radius: 6px; }
   .footer { display: flex; gap: 8px; margin-top: 24px; }
   .footer .spacer { flex: 1; }
+  #pinDialog { width: min(360px, 90vw); text-align: center; }
+
+  #editor { grid-template-columns: 250px minmax(0, 1fr) 330px; background: #121214; z-index: 6; user-select: none; }
+  .ed-side { background: var(--panel); padding: 16px; overflow: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .ed-side h3 { margin: 6px 0 0; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  #editor button { font-size: .9rem; padding: .5em .9em; }
+  .ed-row, .ed-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ed-row > select { flex: 1; min-width: 0; }
+  #edList { flex: 0 1 auto; min-height: 140px; font-size: .9rem; }
+  .ed-stage { display: grid; place-items: center; overflow: hidden; min-height: 0;
+              background: repeating-conic-gradient(#1d1d21 0 25%, #18181b 0 50%) 0 0 / 24px 24px; }
+  #edCanvas { box-shadow: 0 8px 30px rgba(0,0,0,.6); touch-action: none; }
+  #edTitle { margin: 0; font-size: 1.05rem; text-transform: none; letter-spacing: 0; color: #fff; }
+  #edProps { display: grid; gap: 8px; }
+  #edProps label { display: grid; grid-template-columns: 112px 1fr; gap: 8px; align-items: center; font-size: .88rem; color: #bbb; }
+  #edProps small { grid-column: 2; color: #777; }
+  #edProps .color { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: center; }
+  #edProps input[type="color"] { height: 32px; padding: 2px; }
+  #edProps input[type="range"] { padding: 0; }
+  .ed-footer { margin-top: auto; display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; padding-top: 12px; }
+  .hint { color: #888; font-size: .8rem; line-height: 1.5; margin: 0; }
 </style>
 </head>
 <body data-screen="attract">
   <video id="video" autoplay muted playsinline></video>
 
   <section id="attract" class="screen">
-    <div><h1 id="eventTitle"></h1><span class="cta">Touch to start</span></div>
+    <div><h1 id="eventTitle"></h1><span id="startText" class="cta">Touch to start</span></div>
   </section>
   <section id="capture" class="screen"><div id="status"></div><div id="count"></div></section>
   <section id="review" class="screen">
@@ -69,6 +97,43 @@
       <button id="done" class="primary">Done</button>
     </div>
   </section>
+
+  <section id="editor" class="screen">
+    <aside class="ed-side">
+      <h3>Layouts</h3>
+      <select id="edList" size="10"></select>
+      <div class="ed-row"><button id="edUse">Use in booth</button><button id="edDelete">Delete</button></div>
+      <h3>New layout</h3>
+      <div class="ed-row"><select id="edNewSize"></select><button id="edNew">New</button></div>
+      <h3>Add element</h3>
+      <div class="ed-buttons">
+        <button data-add="Photo">Photo slot</button><button data-add="Text">Text</button><button data-add="Image">Image</button>
+        <button data-add="Rectangle">Rectangle</button><button data-add="Ellipse">Ellipse</button>
+      </div>
+      <p class="hint">Click to select · drag to move · drag the corner square to resize (Shift keeps proportions) ·
+        arrow keys nudge (Shift = 10px) · Delete removes · Ctrl/Cmd+D duplicates · Ctrl/Cmd+Z undo · Ctrl/Cmd+S save.
+        Click empty space to edit the layout itself.</p>
+    </aside>
+    <div class="ed-stage"><canvas id="edCanvas"></canvas></div>
+    <aside class="ed-side">
+      <h3 id="edTitle">Layout</h3>
+      <div id="edProps"></div>
+      <div id="edElementActions" class="ed-buttons" hidden>
+        <button data-act="duplicate">Duplicate</button><button data-act="front">To front</button><button data-act="forward">Forward</button>
+        <button data-act="backward">Backward</button><button data-act="back">To back</button>
+        <button data-act="centerH">Center ↔</button><button data-act="centerV">Center ↕</button><button data-act="remove">Delete</button>
+      </div>
+      <div class="ed-footer">
+        <button id="edClose">Close</button><button id="edSaveCopy">Save as copy</button><button id="edSave" class="primary">Save</button>
+      </div>
+    </aside>
+    <datalist id="edFonts">
+      <option>Georgia</option><option>Arial</option><option>Helvetica</option><option>Times New Roman</option><option>Courier New</option>
+      <option>Verdana</option><option>Trebuchet MS</option><option>Impact</option><option>Palatino</option><option>Futura</option>
+      <option>Segoe UI</option><option>Brush Script MT</option><option>system-ui</option>
+    </datalist>
+  </section>
+
   <div id="flash"></div>
   <div id="corner" title="Hold for settings"></div>
   <div id="toast" role="status"></div>
@@ -77,34 +142,51 @@
     <form id="settingsForm" method="dialog">
       <h2>Settings</h2>
       <div class="grid">
+        <h3>Event</h3>
         <label for="eventName">Event name</label><input id="eventName" name="eventName">
+        <label for="startTextInput">Start button text</label><input id="startTextInput" name="startText">
+        <h3>Camera</h3>
         <label for="cameraId">Camera</label><select id="cameraId" name="cameraId"></select>
         <label for="mirror">Mirror camera</label><input id="mirror" name="mirror" type="checkbox">
+        <h3>Photos</h3>
         <label for="templateId">Layout</label>
-        <div class="row"><select id="templateId" name="templateId"></select><button type="button" id="import">Import…</button></div>
+        <div class="row"><select id="templateId" name="templateId"></select><button type="button" id="import">Import…</button><button type="button" id="openEditor">Edit layouts…</button></div>
+        <img id="preview" alt="Layout preview">
         <label for="filter">Filter</label><select id="filter" name="filter"></select>
         <label for="countdown">Countdown (s)</label><input id="countdown" name="countdown" type="number" min="0" max="10">
         <label for="betweenShots">Pause between photos (s)</label><input id="betweenShots" name="betweenShots" type="number" min="0" max="10">
         <label for="reviewSeconds">Review screen (s)</label><input id="reviewSeconds" name="reviewSeconds" type="number" min="3" max="300">
         <label for="outputDir">Save photos to</label>
         <div class="row"><input id="outputDir" name="outputDir" readonly><button type="button" id="choose">Choose…</button></div>
+        <h3>Printing</h3>
         <label for="printer">Printer</label><select id="printer" name="printer"></select>
         <label for="copies">Copies</label><input id="copies" name="copies" type="number" min="1" max="10">
         <label for="autoPrint">Print automatically</label><input id="autoPrint" name="autoPrint" type="checkbox">
         <label for="print2up">Print strips 2-up (4×6)</label><input id="print2up" name="print2up" type="checkbox">
+        <h3>Kiosk</h3>
         <label for="kiosk">Fullscreen kiosk</label><input id="kiosk" name="kiosk" type="checkbox">
+        <label for="pin">Settings PIN</label><input id="pin" name="pin" type="password" inputmode="numeric" placeholder="Leave empty for no PIN" autocomplete="off">
       </div>
       <div class="footer">
         <button type="button" id="openFolder">Open photos</button>
         <button type="button" id="quit">Quit</button>
         <span class="spacer"></span>
-        <button value="cancel">Cancel</button>
+        <button type="button" id="cancelSettings">Cancel</button>
         <button value="save" class="primary">Save</button>
       </div>
     </form>
   </dialog>
 
+  <dialog id="pinDialog">
+    <form id="pinForm" method="dialog">
+      <h2>Enter PIN</h2>
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off">
+      <div class="footer"><span class="spacer"></span><button type="button" id="pinCancel">Cancel</button><button value="ok" class="primary">OK</button></div>
+    </form>
+  </dialog>
+
   <script src="layout.js"></script>
   <script src="app.js"></script>
+  <script src="editor.js"></script>
 </body>
 </html>
