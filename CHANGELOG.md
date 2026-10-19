@@ -3,6 +3,12 @@
 All notable changes to Open Photo Booth are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `npm run e2e`: an end-to-end check that drives the real app with a fake camera through a photo session, the settings PIN and the layout editor, in a throwaway profile.
+
 ## [0.1.0] - 2026-10-18
 
 First public release.

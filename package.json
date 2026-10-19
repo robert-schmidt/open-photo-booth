@@ -8,6 +8,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node test.js",
+    "e2e": "node e2e.mjs",
     "dist": "electron-builder"
   },
   "devDependencies": {

@@ -323,6 +323,7 @@ cd open-photo-booth
 npm install
 npm start      # run the app
 npm test       # layout model and template self-check
+npm run e2e    # drive the real app with a fake camera: session, PIN, layout editor
 npm run dist   # build installers for your OS into dist/
 ```
 
@@ -338,6 +339,7 @@ The app is deliberately small and dependency-free at runtime:
 | `layout.js` | Template model: parse/serialize `template.xml`, colour and fitting maths (shared with tests) |
 | `templates/` | Built-in layouts |
 | `test.js` | Self-check: `npm test` |
+| `e2e.mjs` | End-to-end check in a throwaway profile: `npm run e2e`. `npm run e2e -- docs` also refreshes the README screenshots |
 
 **Releasing:** add your changes to `CHANGELOG.md`, bump `version` in `package.json`, commit, then tag:
 
@@ -347,7 +349,7 @@ git tag v0.2.0 && git push origin main v0.2.0
 
 GitHub Actions builds the macOS (Apple Silicon and Intel) and Windows installers and publishes them on the Releases page with the changelog entry as release notes.
 
-Contributions are welcome: open an issue to discuss bigger changes, keep pull requests focused, and run `npm test` before submitting.
+Contributions are welcome: open an issue to discuss bigger changes, keep pull requests focused, and run `npm test` and `npm run e2e` before submitting.
 
 ## Support the project
 
