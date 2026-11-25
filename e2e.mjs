@@ -232,7 +232,7 @@ try {
 
   // 1c. Review: a look applies to every photo, retaking photo 2 replaces only that file, a touch restarts the idle
   // countdown, and when it runs out the edited layout is saved and sent to auto-print (stubbed: no real printer here).
-  await evaluate(`booth.saveSettings({ ...settings, reviewSeconds: 4, autoPrint: true }).then(s => { settings = s })`)
+  await evaluate(`booth.saveSettings({ ...settings, reviewSeconds: 45, autoPrint: true }).then(s => { settings = s })`)
   await evaluate('printCurrent = () => { window.printed = current.sheet }')
   await evaluate('document.querySelector("#attract").click()')
   await until('screen() === "review"')
@@ -261,23 +261,24 @@ try {
   // With a finger, as guests do. (A mouse drag here is thrown off by the real mouse pointer when it rests over the
   // test window: the browser sends its position as moves of the same pointer.)
   const touch = (type, x, y) => cdp('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
-  // This check has failed now and then with the sticker left where it was, and never when watched (400 drags in a row
-  // pass). The pointer events the photo saw go into the failure message, so the next time says why.
-  await evaluate(`window.dragLog = []; for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) document.querySelector('#result').addEventListener(t, e => dragLog.push([t, e.pointerType + e.pointerId, Math.round(e.clientX), Math.round(e.clientY)].join(' ')))`)
   await touch('touchStart', mid.x, mid.y)
   await touch('touchMove', mid.x + 40, mid.y + 30)
   await touch('touchMove', mid.x + 80, mid.y + 60)
   await touch('touchEnd')
   await until(`${center} === '${plain}'`, 3000).catch(() => {}) // the layout is redrawn once the drag ends
-  assert.equal(await evaluate(center), plain, `dragging the sticker away uncovers the middle (from ${Math.round(mid.x)},${Math.round(mid.y)}: ${await evaluate('dragLog.join("; ")')})`)
+  assert.equal(await evaluate(center), plain, 'dragging the sticker away uncovers the middle')
   await evaluate(`document.querySelectorAll('.thumb .pick')[1].click(); document.querySelector('#retakeBtn').click()`)
   await until('screen() === "review"')
   await evaluate('current.saved')
   assert.ok(!(await file('_2')).equals(orig.two), 'photo 2 replaced')
   assert.ok((await file('_1')).equals(orig.one), 'photo 1 untouched')
   assert.ok(await evaluate(gray), 'the look survives a retake')
+  // The countdown is short only from here, and starts at a touch. (It used to be 4 s for all of the above, none of
+  // which counts as a touch: on a busy computer the review closed under the sticker drag.)
+  const touchReview = `document.querySelector('#review').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))`
+  await evaluate(`booth.saveSettings({ ...settings, reviewSeconds: 4 }).then(s => { settings = s; ${touchReview} })`)
   await sleep(2500)
-  await evaluate(`document.querySelector('#review').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))`)
+  await evaluate(touchReview)
   await sleep(2500)
   assert.equal(await evaluate('screen()'), 'review', 'a touch restarted the countdown')
   await until('screen() === "attract"', 4000)
