@@ -98,7 +98,7 @@ Download the latest version from the **[Releases page](https://github.com/robert
 | macOS, Intel | `Open-Photo-Booth-<version>-mac-x64.dmg` |
 | Windows 10 / 11 (64-bit) | `Open-Photo-Booth-<version>-win-x64.exe` |
 
-**macOS:** open the `.dmg` and drag **Open Photo Booth** into **Applications**. The app is free and not signed with a paid Apple developer certificate, so the first launch needs one extra step: right-click the app → **Open** → **Open**. If macOS still refuses, go to **System Settings → Privacy & Security** and click **Open Anyway**. Allow camera access when asked.
+**macOS:** open the `.dmg` and drag **Open Photo Booth** into **Applications**. From 0.3.2 the app is signed and notarized by Apple, so it opens like any other app. Allow camera access when asked.
 
 **Windows:** run the installer. If SmartScreen shows "Windows protected your PC", click **More info → Run anyway**. Make sure **Settings → Privacy & security → Camera → Let desktop apps access your camera** is on.
 
@@ -360,7 +360,7 @@ Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. I
 | The DSLR doesn't appear | Install and start the maker's webcam utility, set the camera to video/movie mode if required, reconnect USB and restart the booth |
 | The photo looks low-resolution | Some webcam utilities are limited to 1080p. A capture card or a 4K webcam gives more pixels; good light helps the most |
 | Prints have white borders or the wrong size | Set the paper size and borderless printing in the printer's **default** settings in the OS (silent printing uses them) |
-| macOS: "can't be opened" or "damaged" | Right-click the app → Open; or System Settings → Privacy & Security → Open Anyway. As a last resort: `xattr -cr "/Applications/Open Photo Booth.app"` |
+| macOS: "can't be opened" or "damaged" (versions before 0.3.2, which weren't signed) | Right-click the app → Open; or System Settings → Privacy & Security → Open Anyway. As a last resort: `xattr -cr "/Applications/Open Photo Booth.app"` |
 | Windows SmartScreen warning | Click **More info → Run anyway** (the app isn't signed with a paid certificate) |
 | Forgot the settings PIN | Quit the app (Alt+F4 / Cmd+Q) and clear the `"pin"` value in `settings.json`: macOS `~/Library/Application Support/Open Photo Booth/settings.json`, Windows `%APPDATA%\Open Photo Booth\settings.json` |
 
@@ -458,6 +458,8 @@ gh release upload v0.2.0 dist/*.dmg dist/*.exe && gh release edit v0.2.0 --draft
 ```
 
 On Windows, `npm run dist -- --publish never` builds the installer with camera control.
+
+The published macOS installers are signed and notarized: `npm run dist:signed -- --publish never` in place of `npm run dist`, with `CSC_NAME` set to the name of a Developer ID Application certificate in the keychain and `APPLE_KEYCHAIN_PROFILE` to a profile stored with `xcrun notarytool store-credentials`. It signs under the hardened runtime (`build/entitlements.mac.plist`). Plain `npm run dist` stays unsigned, for building your own copy.
 
 Contributions are welcome: open an issue to discuss bigger changes, keep pull requests focused, and run `npm test` and `npm run e2e` before submitting.
 

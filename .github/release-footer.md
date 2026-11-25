@@ -7,7 +7,7 @@
 | macOS, Intel | `Open-Photo-Booth-{version}-mac-x64.dmg` |
 | Windows 10 / 11 (64-bit) | `Open-Photo-Booth-{version}-win-x64.exe` |
 
-**First launch:** on macOS right-click the app → **Open** (or System Settings → Privacy & Security → **Open Anyway**). On Windows click **More info → Run anyway** on the SmartScreen prompt. No account or internet connection needed. See the [README](https://github.com/robert-schmidt/open-photo-booth#readme) for the full guide.
+**First launch:** the macOS app is signed and notarized by Apple, so it opens like any other app. On Windows click **More info → Run anyway** on the SmartScreen prompt. No account or internet connection needed. See the [README](https://github.com/robert-schmidt/open-photo-booth#readme) for the full guide.
 
 ## Support the project
 

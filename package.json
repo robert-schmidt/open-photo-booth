@@ -1,7 +1,7 @@
 {
   "name": "open-photo-booth",
   "productName": "Open Photo Booth",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Free, open-source photo booth for Windows and macOS.",
   "main": "main.js",
   "license": "MIT",
@@ -15,7 +15,8 @@
     "pree2e": "npm run build",
     "e2e": "node e2e.mjs",
     "predist": "npm run build",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "dist:signed": "npm run dist -- -c.mac.identity=\"$CSC_NAME\" -c.mac.hardenedRuntime=true -c.mac.entitlements=build/entitlements.mac.plist -c.mac.entitlementsInherit=build/entitlements.mac.plist"
   },
   "devDependencies": {
     "browser-inswapper": "github:robert-schmidt/browser-inswapper#25ea3b1d7d93e2fe1629bd1580d3c22496f840ac",
