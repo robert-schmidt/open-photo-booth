@@ -183,6 +183,7 @@ Good to know:
 - If the camera is unplugged or its battery dies mid-event, the booth carries on with a webcam and switches back when the camera returns.
 - Live view pauses after 10 idle minutes on the start screen to keep the camera cool, and resumes at the next touch.
 - This is new. The camera code is written against Sony's and Nikon's SDKs and checked with a simulated camera, but has had little time on real bodies, and the Windows side is untested. Please [report](https://github.com/robert-schmidt/open-photo-booth/issues) what works and what doesn't, with your camera model.
+- The **macOS downloads** control cameras. The **Windows download doesn't yet** (its camera code hasn't been built on Windows): there, every camera works in webcam mode.
 - Camera control needs a build that includes the makers' SDKs. They can't be kept in this repository, so a build from source has none unless you add them (see [Development](#development)); such a build still works with every camera in webcam mode.
 
 **2. Webcam mode.** Open Photo Booth also uses your operating system's camera system, so anything that shows up as a camera works:
@@ -206,9 +207,9 @@ To turn it on:
 
 1. Under **Settings → Face swap**, tick **Offer face swap to guests**.
 2. Put your scene images in a folder and choose it under **Your scenes**.
-3. Install the models, once per booth: **Install from folder…** and choose a folder holding `w600k_r50.onnx` and `inswapper_128.onnx` (or `inswapper_128_fp16.onnx`). The booth checks the files and keeps its own copy. The first swap after that takes a few minutes while the graphics card gets ready; later ones take well under a second.
+3. Only in a build from source: install the models, once per booth. **Install from folder…** and choose a folder holding `w600k_r50.onnx` and `inswapper_128.onnx` (or `inswapper_128_fp16.onnx`). The booth checks the files and keeps its own copy. The first swap after that takes a few minutes while the graphics card gets ready; later ones take well under a second.
 
-A build made with a `face-models/` folder (see [Development](#development)) has the models built in, and step 3 isn't needed. The public downloads don't include them, because of their licence:
+The downloads from the Releases page have the models built in, so step 3 isn't needed there. A build from source has them when it's made with a `face-models/` folder (see [Development](#development)). Face swap's parts have licences of their own:
 
 - The models are InsightFace's `inswapper_128` and `w600k_r50`. InsightFace publishes them **for non-commercial research only** and licenses commercial use itself (contact@insightface.ai). If you run paid events, get a licence from InsightFace before you use face swap.
 - The face swap code is [browser-inswapper](https://github.com/robert-schmidt/browser-inswapper), published under the PolyForm Noncommercial licence.
@@ -442,7 +443,15 @@ The app is deliberately small and dependency-free at runtime:
 git tag v0.2.0 && git push origin main v0.2.0
 ```
 
-GitHub Actions builds the macOS (Apple Silicon and Intel) and Windows installers and publishes them on the Releases page with the changelog entry as release notes.
+GitHub Actions then drafts the release with the changelog entry as its notes. The installers are built on your own computer, because the camera SDKs and the face swap models can't be in the repository (`drivers/` and `face-models/`, see above), then added to the draft:
+
+```bash
+npm run dist -- --publish never                                                # on a Mac: both macOS installers
+npx electron-builder --win --x64 --publish never -c.extraResources=face-models # Windows, from a Mac: no camera control
+gh release upload v0.2.0 dist/*.dmg dist/*.exe && gh release edit v0.2.0 --draft=false
+```
+
+On Windows, `npm run dist -- --publish never` builds the installer with camera control.
 
 Contributions are welcome: open an issue to discuss bigger changes, keep pull requests focused, and run `npm test` and `npm run e2e` before submitting.
 

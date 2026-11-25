@@ -18,8 +18,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   - The screen finishes by itself after the idle time, shown on the Done button; any touch restarts it. Auto-print prints the edited layout.
 - **Looks and effects, all on the booth:** auto-enhance, glam (skin smoothing), comic and sketch looks, background replacement (blur, backdrops or your own images), green screen, and no-blink shots.
 - **Boomerangs and video messages** next to photos, saved as MP4. A boomerang also prints as a flip-book layout.
-- **Face swap** into your own scenes, and live characters on the start screen. Needs model files you install from a folder; see the README for their licence.
-- **Camera control (beta):** recent Sony and Nikon Z cameras plugged in by USB are listed by name under **Settings → Camera** and controlled directly: live view as the preview, the camera's own shutter and flash, and its full-resolution file saved. Focus at "1" in the countdown, a **Test shot** button, the camera's battery in the settings, and a fallback to the webcam while the camera is unplugged.
+- **Face swap** into your own scenes, and live characters on the start screen. The downloads have its models built in; see the README for their licence.
+- **Camera control (beta):** recent Sony and Nikon Z cameras plugged in by USB are listed by name under **Settings → Camera** and controlled directly: live view as the preview, the camera's own shutter and flash, and its full-resolution file saved. Focus at "1" in the countdown, a **Test shot** button, the camera's battery in the settings, and a fallback to the webcam while the camera is unplugged. In the macOS downloads; not yet in the Windows one.
 - The settings list every camera model the booth controls, and say what resolution the camera in use delivers.
 - The countdown preview is cut to the shape of the photo and follows the faces; photos are cropped around faces too.
 - A hint on the start screen says how to open the settings until they've been opened once.

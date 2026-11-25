@@ -15,10 +15,10 @@ Open Photo Booth's own code is MIT-licensed (see `LICENSE`). It ships with the c
 
 The library's video-file features, which use mediabunny (MPL-2.0), are left out of the bundle. Emoji stickers are drawn with the operating system's own emoji font; no emoji images are shipped.
 
-## Face swap: not MIT, and its models are not included
+## Face swap: not MIT
 
 - **browser-inswapper** is published under the PolyForm Noncommercial licence, which does not allow commercial use.
-- **The models** it needs, InsightFace's `inswapper_128` and `w600k_r50`, are **not part of Open Photo Booth** or its public downloads. Operators install their own copy, or make a build with their copy built in (a `face-models/` folder). InsightFace makes them "available for non-commercial research purposes only" and licenses other use itself: contact@insightface.ai (inswapper) and recognition-oss-pack@insightface.ai (the recognition models). See https://github.com/deepinsight/insightface#license.
+- **The models** it needs, `inswapper_128` and `w600k_r50`, are InsightFace's, not this project's. They are not in this repository; the release downloads include them. InsightFace makes them "available for non-commercial research purposes only" and licenses other use itself: contact@insightface.ai (inswapper) and recognition-oss-pack@insightface.ai (the recognition models). See https://github.com/deepinsight/insightface#license.
 
 Anyone using face swap at paid events needs the rights to do so from both.
 
