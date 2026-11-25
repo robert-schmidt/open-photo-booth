@@ -1,0 +1,7 @@
+-xc++
+-std=c++17
+-mmacosx-version-min=12.1
+-DHAVE_SONY
+-DHAVE_NIKON
+-isystem../drivers/sony/mac/RemoteCli/app/CRSDK
+-isystem../drivers/nikon/z/Module/Mac/HeaderFile

@@ -12,6 +12,7 @@ const Editor = (() => {
     Text: [['text', 'Text', 'textarea'], ['font', 'Font', 'font'], ['size', 'Font size'], ['textColor', 'Text color', 'color'], ['align', 'Alignment', 'align']],
     Rectangle: [['fill', 'Fill', 'color']],
     Ellipse: [['fill', 'Fill', 'color']],
+    QRCode: [], // kept so imported templates survive editing; it prints nothing (this app has no online sharing)
   }
   const LAYOUT_FIELDS = [['name', 'Layout name', 'text'], ['size', 'Paper size', 'size'], ['width', 'Width (px)'], ['height', 'Height (px)'],
     ['dpi', 'Resolution (DPI)'], ['background', 'Background', 'color']]
@@ -232,11 +233,12 @@ const Editor = (() => {
   }
 
   function add(type) {
-    const w = Math.round(t.width * 0.5), h = Math.round(type === 'Text' ? t.height * 0.08 : type === 'Photo' ? w * 2 / 3 : w * 0.5)
+    const w = Math.round(t.width * (type === 'QRCode' ? 0.22 : 0.5))
+    const h = Math.round(type === 'Text' ? t.height * 0.08 : type === 'Photo' ? w * 2 / 3 : type === 'QRCode' ? w : w * 0.5)
     const n = type === 'Photo' ? Layout.shots(t) + 1 : t.elements.filter(e => e.type === type).length + 1
     const extra = {
       Photo: { PhotoNumber: n }, Text: { Text: '{event}', FontColor: '#FF222222', FontSize: Math.round(h * 0.6) },
-      Rectangle: { Fill: '#FFFFFFFF' }, Ellipse: { Fill: '#FFFFFFFF' }, Image: { KeepAspect: 'True' },
+      Rectangle: { Fill: '#FFFFFFFF' }, Ellipse: { Fill: '#FFFFFFFF' }, Image: { KeepAspect: 'True' }, QRCode: {},
     }[type]
     const e = Layout.element(type, { Name: `${type} ${n}`, Left: Math.round((t.width - w) / 2), Top: Math.round((t.height - h) / 2), Width: w, Height: h, ...extra })
     t.elements.push(e)

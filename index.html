@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; style-src 'self' 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; style-src 'self' 'unsafe-inline'">
 <title>Open Photo Booth</title>
 <style>
   :root { color-scheme: dark; --accent: #ff4f6d; --panel: #1b1b1f; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -13,7 +13,8 @@
   #video.mirror { transform: scaleX(-1); }
   .screen { position: fixed; inset: 0; display: none; }
   body[data-screen="attract"] #attract, body[data-screen="capture"] #capture,
-  body[data-screen="review"] #review, body[data-screen="editor"] #editor { display: grid; }
+  body[data-screen="review"] #review, body[data-screen="clip"] #clip, body[data-screen="editor"] #editor,
+  body[data-screen="welcome"] #welcome { display: grid; }
 
   #attract { place-items: end center; padding-bottom: 10vh; text-align: center; cursor: pointer;
              background: linear-gradient(to top, rgba(0,0,0,.75), transparent 55%); }
@@ -25,19 +26,117 @@
   #capture { place-items: center; }
   #status { position: absolute; top: 4vh; width: 100%; text-align: center; font-size: 2.2rem; text-shadow: 0 2px 10px #000; }
   #count { font-size: 40vh; font-weight: 800; text-shadow: 0 0 60px rgba(0,0,0,.6); }
+  /* During a photo countdown, the preview is just the shape of the layout's photo (see frame() in app.js). */
+  body.framed[data-screen="capture"] #video { margin: auto; width: min(100vw, calc(100vh * var(--a))); height: min(100vh, calc(100vw / var(--a))); transition: object-position .4s ease-out; }
+  #testShotImg { display: block; max-width: 100%; max-height: 180px; margin-top: 8px; border-radius: 8px; }
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
   #flash.on { animation: flash .6s ease-out; }
   @keyframes flash { from { opacity: 1; } }
 
-  #review { grid-template-rows: minmax(0, 1fr) auto; gap: 3vh; padding: 4vh; background: rgba(0,0,0,.92); }
-  #result { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0,0,0,.7)); }
-  .actions { display: flex; gap: 1.5rem; justify-content: center; }
+  #review, #clip { grid-template-columns: minmax(0, 1fr) clamp(320px, 32vw, 520px); gap: 4vh; padding: 4vh; background: rgba(0,0,0,.92); }
+  .clip-stage { grid-column: 1; grid-row: 1; display: grid; place-items: center; min-height: 0; }
+  .clip-stage > * { max-width: 100%; max-height: 100%; border-radius: 8px; filter: drop-shadow(0 10px 30px rgba(0,0,0,.7)); }
+  .clip-stage > [hidden] { display: none; }
+  .modes { display: flex; gap: 2vw; justify-content: center; }
+  .modes button { display: grid; gap: 8px; place-items: center; min-width: 20vw; padding: 3vh 2vw; border-radius: 24px; font-size: clamp(1.2rem, 2.2vw, 2rem); background: rgba(20,20,24,.78); }
+  .modes i { font-style: normal; font-size: 2.4em; line-height: 1; }
+  .characters { display: flex; gap: 1.2vw; align-items: center; justify-content: center; margin-top: 3vh; }
+  .characters p { margin: 0 .5em 0 0; font-size: clamp(1rem, 1.8vw, 1.6rem); text-shadow: 0 2px 10px #000; }
+  .characters button { display: grid; place-items: center; width: clamp(64px, 8vw, 120px); aspect-ratio: 1; padding: 0; border-radius: 50%; overflow: hidden; background: rgba(20,20,24,.78); border: 3px solid transparent; font-size: .9rem; }
+  .characters button.on { border-color: var(--accent); }
+  .characters canvas { width: 100%; height: 100%; }
+  .characters i { font-style: normal; font-size: 2em; line-height: 1; }
+  .stop-rec { position: absolute; bottom: 8vh; left: 50%; transform: translateX(-50%); min-height: 84px; padding: 0 2.4em; font-size: 1.6rem; background: #e5383b; }
+  .rec-dot { color: #ff3b3b; }
+  #result { grid-column: 1; grid-row: 1; width: 100%; height: 100%; min-height: 0; object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0,0,0,.7)); touch-action: none; }
+  .panel { grid-column: 2; grid-row: 1; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 2.5vh; min-height: 0; }
+  .tools { display: flex; flex-direction: column; gap: 2.5vh; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+  .panel h2 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+  .panel .sub { margin: 4px 0 12px; color: #aaa; font-size: 1rem; }
+  .tool-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .thumbs { display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); gap: 10px; }
+  .thumb { position: relative; border-radius: 14px; overflow: hidden; outline: 4px solid transparent; outline-offset: -4px; }
+  .thumb.on { outline-color: var(--accent); }
+  .thumb .pick { display: block; width: 100%; padding: 0; border-radius: 0; background: #222; }
+  .thumb .pick:disabled { opacity: 1; cursor: default; }
+  .thumb img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+  .photo-actions { display: flex; gap: 10px; margin-top: 10px; }
+  .photo-actions button { flex: 1; min-height: 64px; font-size: 1.1rem; padding: 0 1em; }
+  .looks { display: grid; grid-auto-flow: column; grid-auto-columns: 108px; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; scrollbar-width: thin; }
+  .look { display: grid; gap: 6px; padding: 6px 6px 10px; border-radius: 14px; background: #1c1c20; font-size: 1rem; scroll-snap-align: start; }
+  .look img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; }
+  .look.on { background: var(--accent); }
+  .tabs { display: flex; gap: 6px; padding: 6px; border-radius: 22px; background: #1c1c20; }
+  .tabs button { flex: 1; display: grid; place-items: center; gap: 2px; min-height: 68px; padding: 6px 4px; border-radius: 16px; font-size: .95rem; background: none; }
+  .tabs i { font-style: normal; font-size: 1.4rem; line-height: 1; }
+  .tabs button[aria-selected="true"] { background: #3a3a40; }
+  .stickers { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 72px); grid-auto-columns: 72px; gap: 10px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+  .sticker { padding: 0; border-radius: 14px; background: #1c1c20; font-size: 2.4rem; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+  .stickers.props { grid-template-rows: 72px; margin-bottom: 8px; }
+  .sticker img { width: 80%; height: 80%; object-fit: contain; }
+  .seg { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding: 6px 6px 6px 18px; border-radius: 999px; background: #1c1c20; }
+  .seg span { flex: 1.2; font-size: 1.1rem; }
+  .seg button { flex: 1; min-height: 56px; padding: 0; font-size: 1.05rem; background: none; }
+  .seg button[aria-pressed="true"] { background: var(--accent); }
+  .grid .span { grid-column: 1 / -1; }
+  #welcome { z-index: 4; place-items: center; padding: 24px; text-align: center; overflow: auto;
+             background: radial-gradient(circle at 50% 30%, #2a1720, #0b0b0d 65%); }
+  .welcome-card { display: grid; justify-items: center; gap: 18px; width: min(560px, 100%); }
+  .welcome-card > img { width: 104px; height: 104px; border-radius: 24px; box-shadow: 0 18px 50px rgba(255,79,109,.25); }
+  .welcome-card h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.6rem); letter-spacing: -.01em; }
+  .spinner { width: 46px; height: 46px; border-radius: 50%; border: 4px solid #2b2b31; border-top-color: var(--accent); animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(1turn); } }
+  .look .ai-icon { display: grid; place-items: center; aspect-ratio: 1; font-size: 2.6rem; border-radius: 10px; background: #26262c; }
+  #aiBusy { grid-column: 1; grid-row: 1; place-self: center; z-index: 2; display: grid; gap: 16px; justify-items: center; min-width: min(420px, 80%); padding: 28px 32px; border-radius: 20px; background: rgba(15,15,18,.88); font-size: 1.4rem; }
+  #aiBusy[hidden] { display: none; }
+  #aiBusy p { margin: 0; text-align: center; }
+  .ai-bar { width: 100%; height: 10px; border-radius: 5px; background: #333; overflow: hidden; }
+  .ai-bar i { display: block; height: 100%; width: 92%; background: var(--accent); transform-origin: left; animation: ai 18s cubic-bezier(.1,.6,.3,1) forwards; }
+  @keyframes ai { from { transform: scaleX(0); } }
+  #review.busy #result { opacity: .55; transition: opacity .25s .15s; }
+  .toggle { width: 100%; margin-top: 12px; min-height: 60px; font-size: 1.2rem; }
+  .toggle[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--accent); }
+  .chip { font-size: 1rem; padding: 0 1.2em; min-height: 56px; }
+  .actions { display: flex; gap: 14px; }
+  .actions button { flex: 1; min-height: 80px; padding: 0 .6em; white-space: nowrap; position: relative; overflow: hidden; }
+  #idle, .idle { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(255,255,255,.6); transform-origin: left; }
+  @keyframes idle { to { transform: scaleX(0); } }
+  @media (orientation: portrait) {
+    #review, #clip { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+    .panel { grid-column: 1; grid-row: 2; }
+  }
   button { font: inherit; font-size: 1.4rem; padding: .8em 1.8em; border: 0; border-radius: 999px; background: #333; color: #fff; cursor: pointer; }
   button:hover { background: #3d3d42; }
   button.primary { background: var(--accent); }
   button:disabled { opacity: .4; cursor: default; }
 
-  #corner { position: fixed; top: 0; right: 0; width: 80px; height: 80px; z-index: 5; }
+  /* Not a <button>: it must never hold the keyboard focus, or the booth's start button (Space/Enter) would open the settings. */
+  #corner { position: fixed; top: 14px; right: 14px; width: 52px; height: 52px; z-index: 5; display: grid; place-items: center; border-radius: 50%;
+            background: rgba(0,0,0,.5); font-size: 1.6rem; cursor: pointer; opacity: .75; }
+  #corner:hover { opacity: 1; }
+  body:not([data-screen="attract"]) #corner { display: none; }
+  .setup { width: min(860px, 94vw); padding: 30px 34px; }
+  .setup h2 { font-size: 1.9rem; }
+  .setup .sub { color: #aaa; margin: 0 0 20px; }
+  .setup kbd { font: inherit; font-weight: 700; color: #fff; }
+  .setup .footer { margin-top: 28px; }
+  .setup .footer button { font-size: 1.15rem; }
+  #setupName, #setupPin { width: 100%; font-size: 1.5rem; padding: .6em .8em; }
+  .setup-dots { display: flex; gap: 6px; margin-bottom: 18px; }
+  .setup-dots i { width: 28px; height: 5px; border-radius: 3px; background: #3a3a40; }
+  .setup-dots i.on { background: var(--accent); }
+  .setup-layouts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; max-height: 52vh; overflow: auto; }
+  .setup-layouts .look img { aspect-ratio: auto; height: 150px; object-fit: contain; background: #111; }
+  .setup-tools { display: grid; gap: 6px; max-height: 56vh; overflow: auto; }
+  .setup-tools h3 { margin: 12px 0 2px; font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .setup-tool { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: #1c1c20; font-size: 1.1rem; cursor: pointer; }
+  .setup-tool span { flex: 1; }
+  .setup-tool small { color: #999; }
+  .setup-tool.off { opacity: .55; cursor: default; }
+  .setup-tool input { width: 26px; height: 26px; }
+  .settings-hint { position: fixed; top: 21px; right: 78px; z-index: 5; padding: 8px 14px; border-radius: 999px; background: rgba(0,0,0,.65); color: #fff; font-size: .95rem; pointer-events: none; }
+  .settings-hint kbd { font: inherit; font-weight: 700; }
+  body:not([data-screen="attract"]) .settings-hint { display: none; }
   #toast { position: fixed; left: 50%; bottom: 3vh; transform: translateX(-50%); padding: .8em 1.4em; border-radius: 12px; max-width: 90vw;
            background: rgba(20,20,20,.94); font-size: 1.1rem; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 10; }
   #toast.on { opacity: 1; }
@@ -51,7 +150,7 @@
   dialog form { padding: 24px 28px; }
   dialog h2 { margin: 0 0 8px; }
   dialog button { font-size: 1rem; padding: .6em 1.2em; }
-  .grid { display: grid; grid-template-columns: max-content 1fr; gap: 10px 16px; align-items: center; }
+  .grid { display: grid; grid-template-columns: fit-content(40%) 1fr; gap: 10px 16px; align-items: center; } /* long labels wrap */
   .grid label { color: #bbb; }
   .grid h3 { grid-column: 1 / -1; margin: 14px 0 0; font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
   .row { display: flex; gap: 8px; }
@@ -79,23 +178,67 @@
   #edProps input[type="color"] { height: 32px; padding: 2px; }
   #edProps input[type="range"] { padding: 0; }
   .ed-footer { margin-top: auto; display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; padding-top: 12px; }
+  .grid > span:empty:has(+ [hidden]) { display: none; } /* a hidden row's spacer goes too, or the columns slip */
   .hint { color: #888; font-size: .8rem; line-height: 1.5; margin: 0; }
 </style>
 </head>
-<body data-screen="attract">
+<body data-screen="welcome">
   <video id="video" autoplay muted playsinline></video>
 
-  <section id="attract" class="screen">
-    <div><h1 id="eventTitle"></h1><span id="startText" class="cta">Touch to start</span></div>
-  </section>
-  <section id="capture" class="screen"><div id="status"></div><div id="count"></div></section>
-  <section id="review" class="screen">
-    <img id="result" alt="Your photos">
-    <div class="actions">
-      <button id="retake">Retake</button>
-      <button id="print">Print</button>
-      <button id="done" class="primary">Done</button>
+  <section id="welcome" class="screen">
+    <div class="welcome-card">
+      <img src="site/icon.png" alt="">
+      <h1>Welcome to Open Photo Booth</h1>
     </div>
+  </section>
+
+  <section id="attract" class="screen">
+    <div><h1 id="eventTitle"></h1><span id="startText" class="cta">Touch to start</span><div id="modes" class="modes" hidden></div><div id="characters" class="characters" hidden></div></div>
+  </section>
+  <section id="capture" class="screen"><div id="status"></div><div id="count"></div><button id="stopRec" class="stop-rec" hidden>■ Stop</button></section>
+  <section id="review" class="screen">
+    <canvas id="result" aria-label="Your photos"></canvas>
+    <div id="aiBusy" role="status" hidden><p id="aiBusyText"></p><div class="ai-bar"><i></i></div><button id="aiSkip">Skip</button></div>
+    <aside class="panel">
+      <div class="tools">
+      <div id="photosTool">
+        <div id="thumbs" class="thumbs"></div>
+        <p id="photosHint" class="sub"></p>
+        <div class="photo-actions"><button id="retakeBtn">↻ Retake</button><button id="allPhotos" class="chip">Edit all photos</button></div>
+      </div>
+      <div id="toolTabs" class="tabs" role="tablist">
+        <button role="tab" data-tab="looksTool"><i>🎨</i>Look</button>
+        <button role="tab" data-tab="swapTool"><i>🎭</i>Face swap</button>
+        <button role="tab" data-tab="bgTool"><i>🖼️</i>Background</button>
+        <button role="tab" data-tab="stickersTool"><i>🎉</i>Stickers</button>
+      </div>
+      <div id="looksTool">
+        <div class="tool-head"><h2 id="looksTitle">Look</h2></div>
+        <div id="looks" class="looks"></div>
+        <div id="glamSeg" class="seg" role="group" aria-label="Glam"><span>Glam</span><button data-glam="off">Off</button><button data-glam="light">Light</button><button data-glam="strong">Strong</button></div>
+        <button id="enhanceBtn" class="toggle"></button>
+      </div>
+      <div id="swapTool">
+        <div class="tool-head"><h2 id="swapTitle">Face swap</h2><button id="swapTurn" class="chip" hidden>🔀 Swap places</button></div>
+        <p class="sub">Put your face into a scene. It takes a moment.</p>
+        <div id="scenes" class="looks"></div>
+      </div>
+      <div id="bgTool">
+        <div class="tool-head"><h2 id="bgTitle">Background</h2></div>
+        <div id="bgs" class="looks"></div>
+      </div>
+      <div id="stickersTool">
+        <p class="sub">Props fit every face:</p>
+        <div id="props" class="stickers props"></div>
+        <p class="sub">Tap a sticker to add it. Drag to move, pinch to resize and turn.</p>
+        <div id="stickers" class="stickers"></div>
+      </div>
+      </div>
+      <div class="actions">
+        <button id="print">Print</button>
+        <button id="done" class="primary">Done<i id="idle"></i></button>
+      </div>
+    </aside>
   </section>
 
   <section id="editor" class="screen">
@@ -134,8 +277,22 @@
     </datalist>
   </section>
 
+  <section id="clip" class="screen">
+    <div class="clip-stage"><canvas id="clipCanvas" aria-label="Your boomerang"></canvas><video id="clipVideo" playsinline aria-label="Your video"></video></div>
+    <aside class="panel">
+      <div class="tools">
+        <div id="clipLooksTool"><div class="tool-head"><h2>Look</h2></div><div id="clipLooks" class="looks"></div></div>
+        <button id="clipRetake" class="toggle">↻ Retake</button>
+      </div>
+      <div class="actions">
+        <button id="clipPrint">Print</button>
+        <button id="clipDone" class="primary">Done<i class="idle"></i></button>
+      </div>
+    </aside>
+  </section>
   <div id="flash"></div>
-  <div id="corner" title="Hold for settings"></div>
+  <div id="corner" role="button" title="Settings" aria-label="Settings">⚙️</div>
+  <div id="settingsHint" class="settings-hint" hidden>Set up your booth here, or press <kbd></kbd> <span>→</span></div>
   <div id="toast" role="status"></div>
 
   <dialog id="settings">
@@ -143,29 +300,67 @@
       <h2>Settings</h2>
       <div class="grid">
         <h3>Event</h3>
+        <label for="eventId">Event</label>
+        <div class="row"><select id="eventId"></select><button type="button" id="newEvent">New</button><button type="button" id="removeEvent">Remove</button></div>
+        <span></span><p id="eventStats" class="hint"></p>
         <label for="eventName">Event name</label><input id="eventName" name="eventName">
         <label for="startTextInput">Start button text</label><input id="startTextInput" name="startText">
         <h3>Camera</h3>
         <label for="cameraId">Camera</label><select id="cameraId" name="cameraId"></select>
+        <span></span><div><p id="cameraInfo" class="hint"></p><button type="button" id="testShot" hidden>Test shot</button><img id="testShotImg" alt="Test shot" hidden></div>
+        <span></span><details id="supportedCameras" class="hint"><summary>Cameras the booth controls over USB (beta): shutter, flash, full-resolution photos. Any other works as a webcam.</summary></details>
+        <label for="micId">Microphone (video messages)</label><select id="micId" name="micId"></select>
         <label for="mirror">Mirror camera</label><input id="mirror" name="mirror" type="checkbox">
         <h3>Photos</h3>
         <label for="templateId">Layout</label>
         <div class="row"><select id="templateId" name="templateId"></select><button type="button" id="import">Import…</button><button type="button" id="openEditor">Edit layouts…</button></div>
         <img id="preview" alt="Layout preview">
-        <label for="filter">Filter</label><select id="filter" name="filter"></select>
+        <label for="filter">Default look</label><select id="filter" name="filter"></select>
+        <label for="enhance">Auto-enhance photos</label><input id="enhance" name="enhance" type="checkbox">
+        <label for="glam">Glam (skin smoothing)</label><select id="glam" name="glam"><option value="off">Off</option><option value="light">Light</option><option value="strong">Strong</option></select>
+        <label for="background">Default background</label><select id="background" name="background"><option value="none">Original</option><option value="blur">Blur</option><option value="studio">Studio gray</option><option value="white">Studio white</option><option value="night">Night</option><option value="sunset">Sunset</option><option value="img:0">First of your backgrounds</option></select>
+        <label for="greenScreen">Green screen behind guests</label><input id="greenScreen" name="greenScreen" type="checkbox">
+        <label for="chromaTolerance">Green screen tolerance</label><input id="chromaTolerance" name="chromaTolerance" type="range" min="1" max="100">
+        <label for="noBlink">Pick the frame without blinks</label><input id="noBlink" name="noBlink" type="checkbox">
         <label for="countdown">Countdown (s)</label><input id="countdown" name="countdown" type="number" min="0" max="10">
         <label for="betweenShots">Pause between photos (s)</label><input id="betweenShots" name="betweenShots" type="number" min="0" max="10">
-        <label for="reviewSeconds">Review screen (s)</label><input id="reviewSeconds" name="reviewSeconds" type="number" min="3" max="300">
+        <label for="reviewSeconds">Finish after no touch for (s)</label><input id="reviewSeconds" name="reviewSeconds" type="number" min="3" max="300">
         <label for="outputDir">Save photos to</label>
         <div class="row"><input id="outputDir" name="outputDir" readonly><button type="button" id="choose">Choose…</button></div>
+        <h3>Guests can make</h3>
+        <label for="modePhoto">📸 Photos</label><input id="modePhoto" name="modePhoto" type="checkbox">
+        <label for="modeBoomerang">🔁 Boomerangs</label><input id="modeBoomerang" name="modeBoomerang" type="checkbox">
+        <label for="modeVideo">🎬 Video messages, with sound</label><input id="modeVideo" name="modeVideo" type="checkbox">
+        <label for="videoSeconds">Video length (s)</label><input id="videoSeconds" name="videoSeconds" type="number" min="3" max="60">
+        <h3>Guest tools</h3>
+        <label for="guestLooks">Guests pick a look</label><input id="guestLooks" name="guestLooks" type="checkbox">
+        <label for="guestRetake">Guests retake a single photo</label><input id="guestRetake" name="guestRetake" type="checkbox">
+        <label for="guestBackgrounds">Guests change the background</label><input id="guestBackgrounds" name="guestBackgrounds" type="checkbox">
+        <label for="backgroundDir">Your backgrounds (image folder)</label>
+        <div class="row"><input id="backgroundDir" name="backgroundDir" readonly placeholder="Optional: venue, brand or theme images"><button type="button" data-choose="backgroundDir">Choose…</button><button type="button" data-clear="backgroundDir">Clear</button></div>
+        <label for="guestStickers">Guests add stickers</label><input id="guestStickers" name="guestStickers" type="checkbox">
+        <label for="stickerDir">Your stickers (PNG folder)</label>
+        <div class="row"><input id="stickerDir" name="stickerDir" readonly placeholder="Optional: logos, hashtags, props"><button type="button" data-choose="stickerDir">Choose…</button><button type="button" data-clear="stickerDir">Clear</button></div>
+        <h3>Face swap</h3>
+        <p class="hint span">Guests put their faces into your scenes: film posters, characters, magazine covers, any picture with a face in it. After their photos, they pick a scene on the editing screen and their face replaces the one in it.</p>
+        <label for="guestSwap">Offer face swap to guests</label><input id="guestSwap" name="guestSwap" type="checkbox">
+        <label for="swapDir">1. Your scenes (a folder of pictures)</label>
+        <div class="row"><input id="swapDir" name="swapDir" readonly placeholder="Not chosen yet"><button type="button" data-choose="swapDir">Choose…</button><button type="button" data-clear="swapDir">Clear</button></div>
+        <label>2. Face swap models</label><div class="row"><p id="swapStatus" class="hint"></p><button type="button" id="swapInstall">Install from folder…</button></div>
+        <label for="swapLive">Also live: guests pick a character on the start screen and become it on camera</label><input id="swapLive" name="swapLive" type="checkbox">
+        <span></span><p id="swapState" class="hint"></p>
         <h3>Printing</h3>
         <label for="printer">Printer</label><select id="printer" name="printer"></select>
         <label for="copies">Copies</label><input id="copies" name="copies" type="number" min="1" max="10">
         <label for="autoPrint">Print automatically</label><input id="autoPrint" name="autoPrint" type="checkbox">
         <label for="print2up">Print strips 2-up (4×6)</label><input id="print2up" name="print2up" type="checkbox">
-        <h3>Kiosk</h3>
-        <label for="kiosk">Fullscreen kiosk</label><input id="kiosk" name="kiosk" type="checkbox">
+        <h3>Admin</h3>
+        <p class="hint span">Everything in this panel is for you, not your guests. At an event, lock it with a PIN and fill the screen.</p>
         <label for="pin">Settings PIN</label><input id="pin" name="pin" type="password" inputmode="numeric" placeholder="Leave empty for no PIN" autocomplete="off">
+        <label for="kiosk">Fullscreen kiosk</label><input id="kiosk" name="kiosk" type="checkbox">
+        <h3>About</h3>
+        <label>Version</label><span id="version"></span>
+        <label>Source, help and new versions</label><div><button type="button" id="repoLink">github.com/robert-schmidt/open-photo-booth ↗</button></div>
       </div>
       <div class="footer">
         <button type="button" id="openFolder">Open photos</button>
@@ -177,6 +372,32 @@
     </form>
   </dialog>
 
+  <dialog id="setup" class="setup">
+    <div class="setup-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <section>
+      <h2>Let's set up your booth</h2>
+      <p class="sub">What's the event called? It shows on the start screen and on the prints.</p>
+      <input id="setupName" maxlength="80" placeholder="Anna &amp; Ben's wedding" autocomplete="off" aria-label="Event name">
+    </section>
+    <section hidden>
+      <h2>Pick a layout</h2>
+      <p class="sub">You can design your own later, in the settings.</p>
+      <div id="setupLayouts" class="setup-layouts"></div>
+    </section>
+    <section hidden>
+      <h2>What can guests do?</h2>
+      <div id="setupTools" class="setup-tools"></div>
+    </section>
+    <section hidden>
+      <h2>Your booth is ready 🎉</h2>
+      <p class="sub">Change anything later in the settings: tap ⚙️ in the top-right corner of the start screen, or press <kbd id="setupKey"></kbd>. That's also where your camera, printer, layouts and backgrounds are.</p>
+      <div id="setupLock">
+        <p class="sub">Guests can tap ⚙️ too. A PIN keeps them out:</p>
+        <input id="setupPin" type="password" inputmode="numeric" placeholder="Settings PIN (optional)" autocomplete="off" aria-label="Settings PIN">
+      </div>
+    </section>
+    <div class="footer"><button type="button" id="setupBack">Back</button><span class="spacer"></span><button type="button" id="setupMore" hidden>All settings</button><button type="button" id="setupNext" class="primary">Next</button></div>
+  </dialog>
   <dialog id="pinDialog">
     <form id="pinForm" method="dialog">
       <h2>Enter PIN</h2>
@@ -185,8 +406,19 @@
     </form>
   </dialog>
 
+  <script src="site/cameras.js"></script>
   <script src="layout.js"></script>
   <script src="app.js"></script>
+  <script src="camera.js"></script>
   <script src="editor.js"></script>
+  <script src="node_modules/@mediapipe/tasks-vision/vision_bundle.js"></script>
+  <script src="ai.js"></script>
+  <script src="fx.js"></script>
+  <script src="enhance.js"></script>
+  <script src="review.js"></script>
+  <script src="capture.js"></script>
+  <script src="swap.js"></script>
+  <script src="events-ui.js"></script>
+  <script src="setup.js"></script>
 </body>
 </html>

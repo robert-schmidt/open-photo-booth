@@ -19,6 +19,11 @@ assert.equal(L.css('nope'), 'rgba(0,0,0,0)')
 near(L.cover(1920, 1080, 600, 400), { sx: 150, sy: 0, sw: 1620, sh: 1080 })
 near(L.cover(1000, 1000, 400, 200), { sx: 0, sy: 250, sw: 1000, sh: 500 })
 near(L.contain(1000, 500, 400, 400), { dx: 0, dy: 100, dw: 400, dh: 200 })
+// A focus point moves the crop toward it, but never past the edge of the photo.
+near(L.cover(1920, 1080, 600, 400, 0.55, 0.5), { sx: 246, sy: 0, sw: 1620, sh: 1080 })
+near(L.cover(1920, 1080, 600, 400, 0.05, 0.5), { sx: 0, sy: 0, sw: 1620, sh: 1080 })
+near(L.cover(1000, 2000, 400, 400, 0.5, 0.1), { sx: 0, sy: 0, sw: 1000, sh: 1000 })
+near(L.cover(1000, 2000, 400, 400, 0.5, 0.6), { sx: 0, sy: 700, sw: 1000, sh: 1000 })
 
 assert.equal(L.fillText('{event} – {date} {nope}', { event: 'Gala', date: 'today' }), 'Gala – today {nope}')
 
@@ -28,11 +33,16 @@ const t = L.fromNodes({ Width: '600', Height: '1800' }, [
   { tag: 'QRCode', attrs: {} },
 ])
 assert.equal(t.shots, 2)
-assert.deepEqual(t.elements.map(e => e.photo), [1, 2])
+assert.deepEqual(t.elements.map(e => e.type === 'Photo' ? e.photo : e.type), [1, 'QRCode', 2]) // sorted by ZIndex (QRCode's is 0)
 assert.equal(t.elements[0].opacity, 50)
 assert.equal(t.elements[0].strokeWidth, 4)
 assert.equal(t.dpi, 300)
 assert.throws(() => L.fromNodes({}, [{ tag: 'Text', attrs: {} }]), /no photo slots/)
+
+// QRCode elements (dslrBooth layouts) load and save; they aren't photo slots.
+const withQr = L.fromNodes({ Width: '600', Height: '1800' }, [{ tag: 'Photo', attrs: { PhotoNumber: '1' } }, { tag: 'QRCode', attrs: { Left: '400', Top: '1600', Width: '160', Height: '160' } }])
+assert.deepEqual([withQr.shots, withQr.elements[1].type, withQr.elements[1].w], [1, 'QRCode', 160])
+assert.match(L.toXml(withQr), /<QRCode Name="QRCode" Left="400" Top="1600" Width="160" Height="160"/)
 
 // Serializer round-trip, including characters that need escaping.
 const edited = {
@@ -56,5 +66,25 @@ for (const d of fs.readdirSync(path.join(__dirname, 'templates'))) {
     assert.ok(e.x >= 0 && e.y >= 0 && e.x + e.w <= tpl.width && e.y + e.h <= tpl.height, `${d}: ${e.name} out of bounds`)
   }
 }
+
+// Enhance: a washed-out, blue-tinted image gets its full range back and loses most of the tint;
+// an image that is already fine barely changes.
+const E = require('./enhance.js')
+const img = (w, h, px) => { const data = new Uint8ClampedArray(w * h * 4); for (let i = 0; i < w * h; i++) data.set([...px(i % w, Math.floor(i / w)), 255], i * 4); return { data, width: w, height: h } }
+const stats = ({ data }) => { const m = [0, 0, 0]; let lo = 255, hi = 0; for (let i = 0; i < data.length; i += 4) { for (let c = 0; c < 3; c++) m[c] += data[i + c] / (data.length / 4); const y = (data[i] + data[i + 1] + data[i + 2]) / 3; lo = Math.min(lo, y); hi = Math.max(hi, y) } return { m, lo, hi } }
+const misty = E.apply(img(200, 100, x => [90 + x / 2, 90 + x / 2, 110 + x / 2]))
+const ms = stats(misty)
+assert.ok(ms.hi - ms.lo > 160, `range of about 100 stretched by the full 1.6x: ${ms.lo}..${ms.hi}`)
+assert.ok(Math.abs(ms.m[2] - ms.m[0]) < 12, `blue tint reduced: ${ms.m.map(Math.round)}`)
+const fine = img(256, 64, (x, y) => [x, x, Math.min(255, x + (y % 2))])
+const before = Uint8ClampedArray.from(fine.data), after = E.apply(fine).data
+assert.ok(after.every((v, i) => Math.abs(v - before[i]) <= 12), 'a well-exposed image stays close')
+
+// main.js keeps a downloaded face swap model only if it has the fingerprint browser-inswapper checks before using it.
+const lib = fs.readFileSync(path.join(__dirname, 'node_modules/browser-inswapper/src/models.ts'), 'utf8'), main = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8')
+for (const k of ['swapperFp16', 'swapperFp32', 'arcface']) assert.ok(main.includes(new RegExp(`${k}: '([0-9a-f]{64})'`).exec(lib)[1]), `main.js has ${k}'s fingerprint`)
+
+// Versioning: the version in package.json has its dated entry in the changelog (the release notes are cut from it).
+assert.match(fs.readFileSync(path.join(__dirname, 'CHANGELOG.md'), 'utf8'), new RegExp(`^## \\[${require('./package.json').version.replaceAll('.', '\\.')}\\] - \\d{4}-\\d\\d-\\d\\d$`, 'm'), 'CHANGELOG.md has an entry for this version')
 
 console.log('ok')

@@ -18,7 +18,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npx electron-builder --publish never
+      # No camera SDKs here (their licences keep them out of a public repo), so this build has webcams only. For
+      # camera control, build the release on a machine with drivers/, or fetch them from private storage first.
+      - run: npm run dist -- --publish never
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.os }}

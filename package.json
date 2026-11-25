@@ -1,19 +1,27 @@
 {
   "name": "open-photo-booth",
   "productName": "Open Photo Booth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Free, open-source photo booth for Windows and macOS.",
   "main": "main.js",
   "license": "MIT",
   "scripts": {
+    "build:faceswap": "node scripts/build-faceswap.mjs",
+    "build:camera": "node scripts/build-camera.mjs",
+    "build": "npm run build:faceswap && npm run build:camera",
+    "prestart": "npm run build",
     "start": "electron .",
     "test": "node test.js",
+    "pree2e": "npm run build",
     "e2e": "node e2e.mjs",
+    "predist": "npm run build",
     "dist": "electron-builder"
   },
   "devDependencies": {
+    "browser-inswapper": "github:robert-schmidt/browser-inswapper#25ea3b1d7d93e2fe1629bd1580d3c22496f840ac",
     "electron": "44.5.1",
-    "electron-builder": "26.15.3"
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2"
   },
   "build": {
     "appId": "org.openphotobooth.app",
@@ -25,7 +33,26 @@
       "app.js",
       "editor.js",
       "layout.js",
-      "templates/**"
+      "events.js",
+      "events-ui.js",
+      "enhance.js",
+      "review.js",
+      "capture.js",
+      "ai.js",
+      "swap.js",
+      "setup.js",
+      "camera.js",
+      "cameras.js",
+      "vendor/faceswap/**",
+      "fx.js",
+      "models/**",
+      "!node_modules/@mediapipe/tasks-vision/**/*.map",
+      "!node_modules/@mediapipe/tasks-vision/vision_bundle.{cjs,mjs}",
+      "!node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_module_internal.*",
+      "templates/**",
+      "site/icon.png",
+      "site/cameras.js",
+      "THIRD_PARTY_NOTICES.md"
     ],
     "mac": {
       "category": "public.app-category.photography",
@@ -39,7 +66,8 @@
         }
       ],
       "extendInfo": {
-        "NSCameraUsageDescription": "Open Photo Booth uses the camera to take photos of your guests."
+        "NSCameraUsageDescription": "Open Photo Booth uses the camera to take photos of your guests.",
+        "NSMicrophoneUsageDescription": "Open Photo Booth records sound for guests' video messages."
       },
       "identity": "-",
       "hardenedRuntime": false
@@ -51,12 +79,46 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
-    "artifactName": "Open-Photo-Booth-${version}-${os}-${arch}.${ext}"
+    "artifactName": "Open-Photo-Booth-${version}-${os}-${arch}.${ext}",
+    "extraResources": [
+      {
+        "from": "camera-helper/build",
+        "to": "camera-helper",
+        "filter": [
+          "bin/**",
+          "Frameworks/**"
+        ]
+      },
+      {
+        "from": "face-models",
+        "to": "face-models",
+        "filter": [
+          "inswapper_128_fp16.onnx",
+          "inswapper_128.onnx",
+          "w600k_r50.onnx"
+        ]
+      }
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    }
   },
   "author": "Open Photo Booth contributors",
   "homepage": "https://github.com/robert-schmidt/open-photo-booth",
   "repository": {
     "type": "git",
     "url": "https://github.com/robert-schmidt/open-photo-booth.git"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.1.1"
+  },
+  "booth": {
+    "models": ""
   }
 }

@@ -1,7 +1,7 @@
 // Template model: parse, serialize and layout math. Pure functions, shared by the renderer and test.js.
 // Templates use the template.xml format of dslrBooth/LumaBooth: pixel geometry at Resolution DPI, colors as #AARRGGBB.
 const Layout = (() => {
-  const TYPES = ['Photo', 'Image', 'Text', 'Rectangle', 'Ellipse'] // ponytail: QRCode elements are skipped
+  const TYPES = ['Photo', 'Image', 'Text', 'Rectangle', 'Ellipse', 'QRCode']
   const num = (v, d = 0) => (v === undefined || v === '' || isNaN(+v) ? d : +v)
   const bool = v => String(v).toLowerCase() === 'true'
 
@@ -76,10 +76,12 @@ const Layout = (() => {
     return `<?xml version="1.0" encoding="UTF-8"?>\n<Template ${root}>\n  <Elements>\n${els.join('\n')}\n  </Elements>\n</Template>\n`
   }
 
-  // Source crop that fills a dw x dh box, centered (object-fit: cover).
-  function cover(sw, sh, dw, dh) {
-    const s = Math.max(dw / sw, dh / sh)
-    return { sx: (sw - dw / s) / 2, sy: (sh - dh / s) / 2, sw: dw / s, sh: dh / s }
+  // Source crop that fills a dw x dh box (object-fit: cover), centered on the focus point (fx, fy as fractions of the
+  // source; the middle by default) without going past the edges.
+  function cover(sw, sh, dw, dh, fx = 0.5, fy = 0.5) {
+    const s = Math.max(dw / sw, dh / sh), cw = dw / s, ch = dh / s
+    const clamp = (v, max) => Math.min(Math.max(v, 0), max)
+    return { sx: clamp(fx * sw - cw / 2, sw - cw), sy: clamp(fy * sh - ch / 2, sh - ch), sw: cw, sh: ch }
   }
 
   // Destination rect inside a dw x dh box, centered (object-fit: contain).
