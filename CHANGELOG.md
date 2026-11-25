@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+
+- **Settings have a menu.** The sections are listed on the left, each with its icon, and one shows at a time, so nothing needs a long scroll. Save and Cancel stay in reach. In a narrow window the menu is a strip along the top.
+
 ## [0.3.0] - 2026-11-25
 
 ### Added

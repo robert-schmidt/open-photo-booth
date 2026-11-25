@@ -292,6 +292,53 @@ function requestSettings() {
   $('#pinDialog').showModal()
 }
 
+// The settings' menu. The form is one grid of rows under h3 headings: the menu lists the headings, each with its icon
+// (a colour and a 24-unit outline, drawn here), and one section's rows show at a time. A heading without an icon gets the cog.
+const SECTION_ICONS = {
+  Account: ['#3d8bfd', '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'],
+  Event: ['#ff4f6d', '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'],
+  Camera: ['#6e7480', '<path d="M3 9a2 2 0 0 1 2-2h2.5L9 4.5h6L16.5 7H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13.5" r="3.5"/>'],
+  Photos: ['#2fb457', '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m4 18 5-5 4 4 3-3 4 4"/>'],
+  'Guests can make': ['#f08a17', '<rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10.5 5-3v9l-5-3"/>'],
+  'Guest tools': ['#a15cf0', '<path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="M18.5 15v5M16 17.5h5"/>'],
+  'Face swap': ['#e7559a', '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>'],
+  Printing: ['#1ea7c5', '<path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/>'],
+  Admin: ['#8a8a93', '<rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>'],
+  Updates: ['#5e6ad2', '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>'],
+  About: ['#5e6ad2', '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>'],
+}
+const COG = ['#6e7480', '<circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>']
+let section // the heading of the section on show
+function showSection(name = section) {
+  const grid = $('#settingsForm .grid'), nav = $('#settingsNav'), heads = [...grid.querySelectorAll(':scope > h3')].map(h => h.textContent)
+  const was = section, focused = nav.contains(document.activeElement)
+  section = heads.includes(name) ? name : heads[0]
+  let under
+  for (const el of grid.children) {
+    if (el.tagName === 'H3') under = el.textContent
+    el.classList.toggle('sec-off', under !== section)
+  }
+  nav.replaceChildren(...heads.map(h => {
+    const [color, outline] = SECTION_ICONS[h] || COG, b = document.createElement('button')
+    b.type = 'button'
+    b.innerHTML = `<i><svg viewBox="0 0 24 24" aria-hidden="true">${outline}</svg></i>`
+    b.firstChild.style.background = `linear-gradient(${color}, color-mix(in srgb, ${color} 78%, #000))`
+    b.append(h)
+    if (h === section) b.setAttribute('aria-current', 'true')
+    b.onclick = () => showSection(h)
+    return b
+  }))
+  if (focused) nav.querySelector('[aria-current]').focus()
+  if (was !== section) grid.scrollTop = 0
+}
+// Shows the section a setting is in. Also for a value the form refuses on Save: the browser can't point at a field that isn't on show.
+function showSetting(el) {
+  let h = el.closest('#settingsForm .grid > *')
+  while (h && h.tagName !== 'H3') h = h.previousElementSibling
+  if (h) showSection(h.textContent)
+}
+$('#settingsForm').addEventListener('invalid', e => showSetting(e.target), true)
+
 async function openSettings() {
   $('#settingsHint').hidden = true
   try { localStorage.setItem('settingsFound', '1') } catch {}
@@ -310,6 +357,7 @@ async function openSettings() {
   for (const el of form.elements) if (el.name in settings) el[el.type === 'checkbox' ? 'checked' : 'value'] = settings[el.name]
   updatePreview()
   Swap.status()
+  showSection()
   if (!$('#settings').open) $('#settings').showModal() // also called to refill the open dialog after switching events
 }
 

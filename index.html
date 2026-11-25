@@ -161,6 +161,27 @@
   #preview { grid-column: 2; max-height: 220px; max-width: 100%; justify-self: start; border-radius: 6px; }
   .footer { display: flex; gap: 8px; margin-top: 24px; }
   .footer .spacer { flex: 1; }
+  /* Settings: a menu of the sections on the left, one section's rows on the right, Save always in reach. */
+  #settings { width: min(1000px, 96vw); height: min(780px, 92vh); overflow: hidden; }
+  #settingsForm { display: grid; grid-template: "side main" minmax(0, 1fr) "side foot" auto / 232px minmax(0, 1fr); height: 100%; box-sizing: border-box; padding: 0; }
+  #settingsForm .side { grid-area: side; padding: 22px 12px; background: rgba(0,0,0,.28); overflow-y: auto; }
+  #settingsForm .side h2 { margin: 0 10px 14px; }
+  #settingsNav { display: grid; gap: 2px; }
+  #settingsNav button { display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: 10px; background: none; color: #c9c9d1; font-size: .98rem; text-align: left; white-space: nowrap; }
+  #settingsNav button:hover { background: rgba(255,255,255,.06); }
+  #settingsNav button[aria-current] { background: rgba(255,255,255,.12); color: #fff; font-weight: 600; }
+  #settingsNav i { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 2px rgba(0,0,0,.4); }
+  #settingsNav svg { width: 17px; height: 17px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #settingsForm > .grid { grid-area: main; align-content: start; overflow-y: auto; padding: 22px 28px; }
+  #settingsForm > .grid > .sec-off { display: none; }
+  #settingsForm > .grid > h3 { margin: 0 0 4px; font-size: 1.3rem; letter-spacing: 0; text-transform: none; color: #fff; } /* the section's title */
+  #settingsForm > .footer { grid-area: foot; margin: 0; padding: 14px 28px; border-top: 1px solid rgba(255,255,255,.08); }
+  @media (max-width: 760px) { /* a narrow window: the menu becomes a strip of icons along the top */
+    #settingsForm { grid-template: "side" auto "main" minmax(0, 1fr) "foot" auto / minmax(0, 1fr); }
+    #settingsForm .side { padding: 10px 12px; overflow: auto hidden; }
+    #settingsForm .side h2 { display: none; }
+    #settingsNav { display: flex; }
+  }
   #pinDialog { width: min(360px, 90vw); text-align: center; }
 
   #editor { grid-template-columns: 250px minmax(0, 1fr) 330px; background: #121214; z-index: 6; user-select: none; }
@@ -301,7 +322,7 @@
 
   <dialog id="settings">
     <form id="settingsForm" method="dialog">
-      <h2>Settings</h2>
+      <div class="side"><h2>Settings</h2><nav id="settingsNav" aria-label="Settings sections"></nav></div>
       <div class="grid">
         <h3>Event</h3>
         <label for="eventId">Event</label>

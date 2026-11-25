@@ -159,7 +159,7 @@ try {
   await evaluate(`document.querySelector('#camAuto').click()`)
   await until(`${note}.includes('works out the exposure itself')`, 8000)
   assert.deepEqual([await propShown('mode'), await onCamera('iso'), await onCamera('flash'), await onCamera('ev')], ['P (program auto)', 'Auto', 'On (fill)', '0'])
-  await evaluate(`document.querySelector('#camProps').scrollIntoView({ block: 'center' })`)
+  await evaluate(`showSetting(document.querySelector('#camProps')); document.querySelector('#camProps').scrollIntoView({ block: 'center' })`)
   await clean(); await shot('camera-settings.jpg')
   await evaluate('document.querySelector("#settings").close()')
   // After 10 quiet minutes on the start screen live view pauses, and a touch brings it back.
@@ -494,6 +494,7 @@ try {
   assert.ok(await evaluate(`document.querySelector('#settingsHint').hidden && localStorage.getItem('settingsFound') === '1'`), 'the hint goes once the settings are found')
   const { version } = JSON.parse(await fs.readFile(path.join(import.meta.dirname, 'package.json'), 'utf8'))
   assert.equal(await evaluate(`document.querySelector('#version').textContent`), `Open Photo Booth ${version}`)
+  assert.equal(await evaluate(`showSection('Printing'); [document.querySelector('#settingsNav [aria-current]').textContent, [...document.querySelectorAll('#settings .grid > h3')].filter(h => h.offsetParent).map(h => h.textContent).join(), document.querySelectorAll('#settingsNav button').length === document.querySelectorAll('#settings .grid > h3').length].join('|')`), 'Printing|Printing|true', 'the settings menu shows one section at a time')
   const columns = `new Set([...document.querySelectorAll('#settings .grid > label')].filter(l => l.offsetParent).map(l => Math.round(l.getBoundingClientRect().left))).size`
   assert.equal(await evaluate(columns), 1, 'every setting lines up in its column')
   await evaluate('document.querySelector("#settings").close()')
