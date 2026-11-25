@@ -401,7 +401,7 @@ npm run dist   # build installers for your OS into dist/
 
 `BOOTH_FACE_MODELS=<folder with the face swap models> npm run e2e` also checks face swap. `BOOTH_APP=<path to a built app's executable> npm run e2e` runs the checks against a packaged build.
 
-**Face swap models.** Put `w600k_r50.onnx` and `inswapper_128_fp16.onnx` and/or `inswapper_128.onnx` in a `face-models/` folder next to `package.json` (it's ignored by git: the files are too big for it, and their licence is not this project's). `npm start` and `npm run dist` then have face swap ready with nothing to install. Which swap model a computer uses depends on its graphics card, so a build for any computer needs both.
+**Face swap models (only when you build the app yourself).** The downloads from the Releases page already have them built in. The repository doesn't: the files are too big for git. To have them in your own build, put `w600k_r50.onnx`, `inswapper_128_fp16.onnx` and `inswapper_128.onnx` in a `face-models/` folder next to `package.json`; `npm start` and `npm run dist` pick them up. Without the folder, the app asks for them once under **Settings → Face swap**.
 
 **Camera SDKs.** Sony's and Nikon's SDKs are free downloads, but their licence agreements don't allow them in a public repository (they may only be shipped inside a built app). Without them everything still builds and runs, with webcams and a simulated camera only. To build camera control in, download and unpack them into `drivers/` (or the folder `BOOTH_DRIVERS` names):
 
