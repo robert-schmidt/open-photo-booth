@@ -434,7 +434,7 @@ try {
   assert.ok(!(await evaluate(`document.querySelector('#startText').hidden`)))
   // With sharing off again the server is gone, and so are the links.
   await evaluate(`booth.saveSettings({ ...settings, localShare: false }).then(s => { settings = s })`)
-  assert.equal(await evaluate('booth.shareBase()'), '')
+  assert.equal(await evaluate('booth.shareLocal()'), '')
   if (local) assert.ok(await fetch(`${local}/p/${shareKey}`).then(() => false, () => true), 'nothing listens once sharing is off')
   console.log('capture modes ok')
 

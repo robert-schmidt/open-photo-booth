@@ -183,6 +183,8 @@ There are two ways a camera reaches the booth.
 Good to know:
 
 - Set the camera to save JPEG (or RAW + JPEG), turn its auto power off off, and use a dummy battery for long events.
+- With studio flashes, live view looks dark, because the exposure is set for the flash. Sony: set **Live View Display** to **Setting Effect Off**. Nikon: turn **Apply settings to live view** off (on newer bodies, **View mode (photo Lv)** → **Adjust for ease of viewing**).
+- Sony's silent shutter (Silent Mode) keeps the flash from firing: leave it off.
 - The booth focuses at "1" in the countdown. **Settings → Camera → Test shot** checks focus, exposure and flash before guests arrive.
 - **Camera settings** appear under **Settings → Camera** once a controlled camera is in use: exposure mode, ISO, shutter speed, aperture, brightness, white balance, flash and flash strength. They are the camera's own settings, so a change takes effect at once and stays in the camera. Anything greyed out is decided on the camera (its mode dial, or the exposure mode).
   - **Auto** lets the camera work out the exposure for every photo, with its flash on if it has one. Good for a room where the light changes.
