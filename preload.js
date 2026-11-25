@@ -23,7 +23,6 @@ contextBridge.exposeInMainWorld('booth', {
   logSession: entry => ipcRenderer.invoke('session:log', entry),
   listImages: kind => ipcRenderer.invoke('images:list', kind),
   loadModel: name => ipcRenderer.invoke('model:load', name),
-  installFaceModels: () => ipcRenderer.invoke('swap:install'),
   version: () => ipcRenderer.invoke('app:version'),
   openRepo: () => ipcRenderer.invoke('app:repo'),
   camera: {

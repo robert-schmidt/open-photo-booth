@@ -75,7 +75,7 @@ Open Photo Booth is the opposite:
 | **Backgrounds** | Blur, studio and themed backdrops or your own images, cut out on the booth itself; or a real green screen with adjustable tolerance |
 | **Glam and no-blink** | Light or strong skin smoothing, and the booth keeps the frame where nobody blinked |
 | **Stickers and props** | Emoji and your own PNGs, moved, resized and turned with fingers; glasses, hats and crowns land on every face |
-| **Face swap** | Guests put their faces into your scenes (posters, characters, covers), or become a character live on the start screen. Runs on the booth; needs model files you install yourself, see [Face swap](#face-swap) |
+| **Face swap** | Guests put their faces into your scenes (posters, characters, covers), or become a character live on the start screen. Runs on the booth, after a one-time download of its models, see [Face swap](#face-swap) |
 | **Camera control** | Recent Sony and Nikon Z cameras over USB (beta): live view, the camera's own shutter and flash, full-resolution files |
 | **Multi-shot sessions** | The layout decides how many photos are taken (1–N), with a pause between shots |
 | **Layouts** | Classic 2×6 strip, postcard (1 large + 3 small), grid of four and single photo, plus your own |
@@ -205,11 +205,13 @@ Guests put their own faces into your **scenes**: film posters, characters, magaz
 
 To turn it on:
 
-1. Under **Settings → Face swap**, tick **Offer face swap to guests**.
+1. Under **Settings → Face swap** (or in the setup guide), tick **Offer face swap to guests**.
 2. Put your scene images in a folder and choose it under **Your scenes**.
-3. Only in a build from source: install the models, once per booth. **Install from folder…** and choose a folder holding `w600k_r50.onnx` and `inswapper_128.onnx` (or `inswapper_128_fp16.onnx`). The booth checks the files and keeps its own copy. The first swap after that takes a few minutes while the graphics card gets ready; later ones take well under a second.
+3. **Save.** The first time, the booth downloads the face swap models: about 450 to 700 MB, depending on its graphics card, so it needs an internet connection this once. The start screen and the settings show the progress. After that, face swap works offline. The very first swap takes a few minutes while the graphics card gets ready; later ones take well under a second.
 
-The downloads from the Releases page have the models built in, so step 3 isn't needed there. A build from source has them when it's made with a `face-models/` folder (see [Development](#development)). Face swap's parts have licences of their own:
+Setting up at home for a venue without internet? Press **Download now** in the settings there.
+
+Face swap's parts have licences of their own:
 
 - The models are InsightFace's `inswapper_128` and `w600k_r50`. InsightFace publishes them **for non-commercial research only** and licenses commercial use itself (contact@insightface.ai). If you run paid events, get a licence from InsightFace before you use face swap.
 - The face swap code is [browser-inswapper](https://github.com/robert-schmidt/browser-inswapper), published under the PolyForm Noncommercial licence.
@@ -344,7 +346,7 @@ Use **Settings → Open photos** to jump to the folder. Change the location with
 
 ## Privacy
 
-Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. It makes no network connections. Every effect, including background removal and face swap, runs on the booth itself, so no photo ever leaves it. Photos, settings and layouts are stored only on your computer, in the folders listed above. Delete them whenever you like.
+Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. It makes no network connections, with one exception: if you turn on face swap, it downloads the face swap models once from this project's GitHub page. Nothing is ever uploaded. Every effect, including background removal and face swap, runs on the booth itself, so no photo ever leaves it. Photos, settings and layouts are stored only on your computer, in the folders listed above. Delete them whenever you like.
 
 ## Troubleshooting
 
@@ -362,7 +364,7 @@ Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. I
 
 **Is it really free, also for commercial use?** Yes. It's MIT-licensed: use it at paid events, in a rental business, or as the base for your own product. One part is the exception: **face swap** uses a library and models whose public licences are for non-commercial use, see [Face swap](#face-swap).
 
-**Do I need an account or an internet connection?** No, never.
+**Do I need an account or an internet connection?** No account, ever. No internet either, except once if you turn on face swap, to download its models.
 
 **Does it add a watermark?** No. Add your own logo with an Image element if you want one.
 
@@ -399,16 +401,16 @@ npm run dist   # build installers for your OS into dist/
 
 `npm start`, `npm run e2e` and `npm run dist` first run `npm run build`: it bundles the face swap library into `vendor/` and builds `camera-helper`, which needs a C++ compiler (Xcode's command line tools on macOS, Visual Studio's C++ tools on Windows).
 
-`BOOTH_FACE_MODELS=<folder with the face swap models> npm run e2e` also checks face swap. `BOOTH_APP=<path to a built app's executable> npm run e2e` runs the checks against a packaged build.
+`BOOTH_APP=<path to a built app's executable> npm run e2e` runs the checks against a packaged build.
 
-**Face swap models (only when you build the app yourself).** The downloads from the Releases page already have them built in. The repository doesn't: the files are too big for git. To have them in your own build, put `w600k_r50.onnx`, `inswapper_128_fp16.onnx` and `inswapper_128.onnx` in a `face-models/` folder next to `package.json`; `npm start` and `npm run dist` pick them up. Without the folder, the app asks for them once under **Settings → Face swap**.
+**Face swap models.** The app downloads them from the address in `package.json` (`booth.models`) the first time face swap is turned on. `BOOTH_MODELS=<folder URL, file:// works>` points it elsewhere; `BOOTH_FACE_MODELS=<folder with the models> npm run e2e` checks the download and the swap without the network.
 
 **Camera SDKs.** Sony's and Nikon's SDKs are free downloads, but their licence agreements don't allow them in a public repository (they may only be shipped inside a built app). Without them everything still builds and runs, with webcams and a simulated camera only. To build camera control in, download and unpack them into `drivers/` (or the folder `BOOTH_DRIVERS` names):
 
 - Sony's [Camera Remote SDK](https://support.d-imaging.sony.co.jp/app/sdk/en/index.html): its `RemoteCli.zip`, unpacked as `drivers/sony/mac/RemoteCli/` and `drivers/sony/win/RemoteCli/`
 - Nikon's [Remote SDK for Z cameras](https://sdk.nikonimaging.com): its `Module` folder as `drivers/nikon/z/Module/` (on macOS, also unzip `Module/Mac/BinaryFile/TestApp.zip` next to itself)
 
-`camera-helper/build/bin/camera-helper probe` tries the first camera it finds without the app: it lists cameras, counts live view frames and takes a photo. `BOOTH_SIM_CAMERA=photo.jpg npm start` adds a simulated camera showing that photo.
+`camera-helper/build/mac/bin/camera-helper probe` tries the first camera it finds without the app: it lists cameras, counts live view frames and takes a photo. `BOOTH_SIM_CAMERA=photo.jpg npm start` adds a simulated camera showing that photo.
 
 The app is deliberately small and dependency-free at runtime:
 
@@ -443,11 +445,11 @@ The app is deliberately small and dependency-free at runtime:
 git tag v0.2.0 && git push origin main v0.2.0
 ```
 
-GitHub Actions then drafts the release with the changelog entry as its notes. The installers are built on your own computer, because the camera SDKs and the face swap models can't be in the repository (`drivers/` and `face-models/`, see above), then added to the draft:
+GitHub Actions then drafts the release with the changelog entry as its notes. The installers are built on your own computer, because the camera SDKs can't be in the repository (`drivers/`, see above), then added to the draft:
 
 ```bash
-npm run dist -- --publish never                                                # on a Mac: both macOS installers
-npx electron-builder --win --x64 --publish never -c.extraResources=face-models # Windows, from a Mac: no camera control
+npm run dist -- --publish never                    # on a Mac: both macOS installers, with camera control
+npx electron-builder --win --x64 --publish never   # Windows, from a Mac: no camera control
 gh release upload v0.2.0 dist/*.dmg dist/*.exe && gh release edit v0.2.0 --draft=false
 ```
 

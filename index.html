@@ -136,6 +136,7 @@
   .setup-tool input { width: 26px; height: 26px; }
   .settings-hint { position: fixed; top: 21px; right: 78px; z-index: 5; padding: 8px 14px; border-radius: 999px; background: rgba(0,0,0,.65); color: #fff; font-size: .95rem; pointer-events: none; }
   .settings-hint kbd { font: inherit; font-weight: 700; }
+  #swapProgress { right: auto; left: 22px; }
   body:not([data-screen="attract"]) .settings-hint { display: none; }
   #toast { position: fixed; left: 50%; bottom: 3vh; transform: translateX(-50%); padding: .8em 1.4em; border-radius: 12px; max-width: 90vw;
            background: rgba(20,20,20,.94); font-size: 1.1rem; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 10; }
@@ -293,6 +294,7 @@
   <div id="flash"></div>
   <div id="corner" role="button" title="Settings" aria-label="Settings">⚙️</div>
   <div id="settingsHint" class="settings-hint" hidden>Set up your booth here, or press <kbd></kbd> <span>→</span></div>
+  <div id="swapProgress" class="settings-hint" role="status" hidden></div>
   <div id="toast" role="status"></div>
 
   <dialog id="settings">
@@ -346,7 +348,7 @@
         <label for="guestSwap">Offer face swap to guests</label><input id="guestSwap" name="guestSwap" type="checkbox">
         <label for="swapDir">1. Your scenes (a folder of pictures)</label>
         <div class="row"><input id="swapDir" name="swapDir" readonly placeholder="Not chosen yet"><button type="button" data-choose="swapDir">Choose…</button><button type="button" data-clear="swapDir">Clear</button></div>
-        <label>2. Face swap models</label><div class="row"><p id="swapStatus" class="hint"></p><button type="button" id="swapInstall">Install from folder…</button></div>
+        <label>2. Face swap models</label><div class="row"><p id="swapStatus" class="hint"></p><button type="button" id="swapGet">Download now</button></div>
         <label for="swapLive">Also live: guests pick a character on the start screen and become it on camera</label><input id="swapLive" name="swapLive" type="checkbox">
         <span></span><p id="swapState" class="hint"></p>
         <h3>Printing</h3>

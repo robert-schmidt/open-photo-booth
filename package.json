@@ -1,7 +1,7 @@
 {
   "name": "open-photo-booth",
   "productName": "Open Photo Booth",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Free, open-source photo booth for Windows and macOS.",
   "main": "main.js",
   "license": "MIT",
@@ -82,20 +82,11 @@
     "artifactName": "Open-Photo-Booth-${version}-${os}-${arch}.${ext}",
     "extraResources": [
       {
-        "from": "camera-helper/build",
+        "from": "camera-helper/build/${os}",
         "to": "camera-helper",
         "filter": [
           "bin/**",
           "Frameworks/**"
-        ]
-      },
-      {
-        "from": "face-models",
-        "to": "face-models",
-        "filter": [
-          "inswapper_128_fp16.onnx",
-          "inswapper_128.onnx",
-          "w600k_r50.onnx"
         ]
       }
     ],
@@ -119,6 +110,6 @@
     "@mediapipe/tasks-vision": "^1.1.1"
   },
   "booth": {
-    "models": ""
+    "models": "https://github.com/robert-schmidt/open-photo-booth/releases/download/face-models/"
   }
 }

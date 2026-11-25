@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import assert from 'node:assert'
 import electron from 'electron'
 
@@ -20,11 +21,12 @@ const d = new Date(), day = new Date(d - d.getTimezoneOffset() * 60000).toISOStr
 const jpgs = async dir => (await fs.readdir(dir, { recursive: true })).filter(f => f.endsWith('.jpg'))
 const log = async dir => (await fs.readFile(path.join(dir, 'sessions.jsonl'), 'utf8')).trim().split('\n').map(l => JSON.parse(l))
 
-// BOOTH_FACE_MODELS (a folder with the InsightFace models) is the folder the operator "picks" under Install from
-// folder. Without it the face swap checks are skipped.
-if (process.env.BOOTH_FACE_MODELS) process.env.BOOTH_PICK_FOLDER = process.env.BOOTH_FACE_MODELS
+// BOOTH_FACE_MODELS (a folder with the InsightFace models) stands in for the address the booth downloads them from.
+// Without it the face swap checks are skipped, and the address leads nowhere: the tests never use the network.
+process.env.BOOTH_MODELS = pathToFileURL(process.env.BOOTH_FACE_MODELS || path.join(tmp, 'no-models')).href
 // A camera the booth controls, simulated: it shows this photo, and takes it again at 20 megapixels.
 process.env.BOOTH_SIM_CAMERA = path.join(import.meta.dirname, 'test', 'portrait.jpg')
+process.env.BOOTH_BACKGROUND = '1' // the window doesn't take the keyboard from whoever is at this computer
 process.env.BOOTH_CAMERA_TIMEOUT = '4000' // a stuck camera-helper is restarted after this long
 
 // BOOTH_APP runs a built app instead, fuses and all (e.g. "dist/mac-arm64/Open Photo Booth.app/Contents/MacOS/Open Photo Booth").
@@ -71,6 +73,7 @@ const { ws, cdp, evaluate, until, shot } = await attach(page, m => {
   if (m.method === 'Runtime.exceptionThrown') consoleErrors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text)
   if (m.method === 'Runtime.consoleAPICalled' && ['error', 'warning'].includes(m.params.type)) warnings.push(m.params.args.map(a => a.value ?? a.description).join(' '))
 })
+await cdp('Emulation.setFocusEmulationEnabled', { enabled: true }) // the page behaves as if its window had the keyboard
 const mouse = (type, x, y) => cdp('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 })
 const key = (k, modifiers = 0) => cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code: 'Key' + k.toUpperCase(), modifiers, windowsVirtualKeyCode: k.toUpperCase().charCodeAt(0) })
 const clean = () => evaluate(`clearTimeout(toast.timer); document.querySelector('#toast').classList.remove('on')`)
@@ -340,21 +343,19 @@ try {
     }
   })()`)
   assert.deepEqual(ai, { faces: 1, cheek: true, corner: true, best: true, backdrop: true, person: true, art: true, green: true })
-  // Face swap (only with BOOTH_FACE_MODELS, a folder with the InsightFace models): the booth fetched them on its
-  // first start and keeps them. Then a mirrored copy of the portrait goes into the portrait: the face changes, the
+  // Face swap (only with BOOTH_FACE_MODELS, a folder with the InsightFace models). Nothing is downloaded until the
+  // operator turns face swap on; then the booth fetches the models once, says so on the start screen and in the
+  // settings, and keeps them. Then a mirrored copy of the portrait goes into the portrait: the face changes, the
   // background doesn't.
-  // A build with the models built in (a face-models/ folder at build time) has nothing to install.
-  const builtIn = await evaluate('settings.swapReady')
-  if (builtIn) assert.ok(await evaluate(`document.querySelector('#swapInstall').hidden`), 'models built in: nothing to install')
-  if (process.env.BOOTH_FACE_MODELS || builtIn) {
-    if (!builtIn) {
-      assert.ok(await evaluate(`!document.querySelector('#swapInstall').hidden`), 'no models yet: the settings offer to install them')
-      await evaluate(`document.querySelector('#swapInstall').click()`)
-      await until('settings.swapReady', 600000)
-      const kept = await fs.readdir(path.join(profile, 'face-models'))
-      assert.ok(kept.includes('w600k_r50.onnx') && kept.some(f => /^inswapper_128.*\.onnx$/.test(f)) && !kept.some(f => f.endsWith('.part')), `models kept: ${kept}`)
-    }
-    assert.equal(await evaluate(`document.querySelector('#swapStatus').textContent`), 'Installed ✓')
+  assert.ok(await evaluate(`!settings.swapReady && !document.querySelector('#swapGet').hidden && document.querySelector('#swapProgress').hidden`), 'face swap is off: no models, no download')
+  if (process.env.BOOTH_FACE_MODELS) {
+    await evaluate(`show('attract'); booth.saveSettings({ ...settings, guestSwap: true }).then(s => { settings = s; return applySettings() })`)
+    await until(`!document.querySelector('#swapProgress').hidden && document.querySelector('#swapGet').hidden && /Face swap: /.test(document.querySelector('#swapProgress').textContent)`, 5000)
+    await until('settings.swapReady', 600000)
+    const kept = await fs.readdir(path.join(profile, 'face-models'))
+    assert.ok(kept.includes('w600k_r50.onnx') && kept.some(f => /^inswapper_128.*\.onnx$/.test(f)) && !kept.some(f => f.endsWith('.part')), `models kept: ${kept}`)
+    assert.ok(await evaluate(`document.querySelector('#swapProgress').hidden && document.querySelector('#swapGet').hidden`), 'the download note goes when it is done')
+    assert.equal(await evaluate(`document.querySelector('#swapStatus').textContent`), 'On this booth ✓')
     const swapped = await evaluate(`(async () => {
       const im = await loadImage(PORTRAIT), scene = canvas(im.width, im.height), guest = canvas(im.width, im.height)
       scene.getContext('2d').drawImage(im, 0, 0)

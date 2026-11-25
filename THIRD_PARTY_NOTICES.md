@@ -18,7 +18,7 @@ The library's video-file features, which use mediabunny (MPL-2.0), are left out 
 ## Face swap: not MIT
 
 - **browser-inswapper** is published under the PolyForm Noncommercial licence, which does not allow commercial use.
-- **The models** it needs, `inswapper_128` and `w600k_r50`, are InsightFace's, not this project's. They are not in this repository; the release downloads include them. InsightFace makes them "available for non-commercial research purposes only" and licenses other use itself: contact@insightface.ai (inswapper) and recognition-oss-pack@insightface.ai (the recognition models). See https://github.com/deepinsight/insightface#license.
+- **The models** it needs, `inswapper_128` and `w600k_r50`, are InsightFace's, not this project's. They are not in the installers: the app downloads them from this project's GitHub releases when face swap is first turned on. InsightFace makes them "available for non-commercial research purposes only" and licenses other use itself: contact@insightface.ai (inswapper) and recognition-oss-pack@insightface.ai (the recognition models). See https://github.com/deepinsight/insightface#license.
 
 Anyone using face swap at paid events needs the rights to do so from both.
 

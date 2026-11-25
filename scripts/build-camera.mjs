@@ -1,4 +1,4 @@
-// Builds camera-helper (camera-helper/*.cpp) for this computer into camera-helper/build/: a universal binary on macOS
+// Builds camera-helper (camera-helper/*.cpp) for this computer into camera-helper/build/mac or build/win: a universal binary on macOS
 // (Xcode's command line tools), camera-helper.exe on Windows (Visual Studio's C++ tools, found with vswhere). Elsewhere
 // there's nothing to build: the booth runs with webcams only.
 //
@@ -14,9 +14,10 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const root = path.join(import.meta.dirname, '..'), dir = path.join(root, 'camera-helper'), out = path.join(dir, 'build')
-const bin = path.join(out, 'bin'), drivers = process.env.BOOTH_DRIVERS || path.join(root, 'drivers')
 const mac = process.platform === 'darwin', win = process.platform === 'win32'
+// One folder per system (build/mac, build/win), so an installer built here for the other system doesn't carry this one's files.
+const root = path.join(import.meta.dirname, '..'), dir = path.join(root, 'camera-helper'), out = path.join(dir, 'build', mac ? 'mac' : 'win')
+const bin = path.join(out, 'bin'), drivers = process.env.BOOTH_DRIVERS || path.join(root, 'drivers')
 if (!mac && !win) {
   console.log('camera-helper: nothing to build on this platform (webcams only)')
   process.exit(0)

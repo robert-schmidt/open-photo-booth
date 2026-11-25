@@ -45,7 +45,7 @@ const Setup = (() => {
       }
       row.append(box)
       const note = key === 'guestSwap' && draft.guestSwap && !settings.swapReady
-      return note ? [row, Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Face swap also needs its models, installed once: All settings → Face swap.' })] : [row]
+      return note ? [row, Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Face swap downloads its models once, when you finish this guide: about 450 to 700 MB, so the booth needs internet this one time. The start screen shows the progress.' })] : [row]
     })]))
   }
 

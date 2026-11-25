@@ -12,7 +12,7 @@ const path = require('node:path')
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const EXE = process.platform === 'win32' ? 'camera-helper.exe' : 'camera-helper'
-const bin = () => path.join(...(app.isPackaged ? [process.resourcesPath, 'camera-helper'] : [__dirname, 'camera-helper', 'build']), 'bin', EXE)
+const bin = () => path.join(...(app.isPackaged ? [process.resourcesPath, 'camera-helper'] : [__dirname, 'camera-helper', 'build', process.platform === 'win32' ? 'win' : 'mac']), 'bin', EXE)
 const TIMEOUT = Number(process.env.BOOTH_CAMERA_TIMEOUT) || 15000 // for any answer, a shot included
 const dir = path.join(os.tmpdir(), `booth-camera-${process.pid}`) // the camera's photos, until the page has them
 

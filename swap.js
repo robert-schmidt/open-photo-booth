@@ -1,7 +1,7 @@
-/* global booth, $, settings, canvas, loadImage, video, stream */
+/* global booth, $, settings, canvas, loadImage, video, stream, toast */
 // On-device face swap with browser-inswapper (Chronic Qual SRL, bundled in vendor/faceswap) and InsightFace's swap and
-// identity models. The models aren't part of the app: the booth fetches them once from its models address, or the
-// operator installs them from a folder in the settings (main.js keeps them and serves them at face-models/). Guests' faces go into the event's scenes (posters, characters, covers) on the review screen; or, picked
+// identity models. The models aren't in the installer: the booth downloads them once, when face swap is first turned on
+// (main.js fetches, checks and keeps them, and serves them at face-models/). Guests' faces go into the event's scenes (posters, characters, covers) on the review screen; or, picked
 // on the start screen, a scene's character takes over the guest's face live, for photos, boomerangs and videos alike.
 const Swap = (() => {
   let engine, onProgress = () => {}
@@ -39,26 +39,35 @@ const Swap = (() => {
   }
 
   // The settings' line about face swap on this booth.
-  // The settings' lines about face swap on this booth: the models, and what still keeps it from the guests.
-  const status = (text = settings.swapReady ? 'Installed ✓' : 'Not installed. They are two files you bring yourself: inswapper_128.onnx and w600k_r50.onnx (see Face swap in the README).') => {
-    $('#swapStatus').textContent = text
-    $('#swapInstall').hidden = !!settings.swapReady
-    const f = $('#settingsForm'), missing = [!f.swapDir.value && 'choose your scenes (1)', !settings.swapReady && 'install the models (2)'].filter(Boolean)
-    $('#swapState').textContent = !f.guestSwap.checked ? '' : missing.length ? `Guests won't see face swap yet: ${missing.join(' and ')}.` : 'Ready after Save: guests find 🎭 Face swap on the editing screen.'
+  // What the operator sees of the models: a line and a button in the settings, a line under them saying what still
+  // keeps face swap from the guests, and while they download, a note on the start screen.
+  let state = '' // 'busy' while downloading and preparing, 'failed' after a download that didn't finish
+  const status = text => {
+    const f = $('#settingsForm'), busy = state === 'busy'
+    $('#swapStatus').textContent = text ?? (settings.swapReady ? 'On this booth ✓' : state === 'failed' ? "The download didn't finish. Check the internet connection, then try again."
+      : 'Not on this booth yet. They download once (about 450 to 700 MB) when you turn face swap on and save, or right now.')
+    $('#swapGet').hidden = settings.swapReady || busy
+    $('#swapGet').textContent = state === 'failed' ? 'Try again' : 'Download now'
+    $('#swapProgress').hidden = !busy
+    if (busy) $('#swapProgress').textContent = `🎭 Face swap: ${text || 'starting…'}`
+    const missing = [!f.swapDir.value && 'your scenes (1)', !settings.swapReady && (busy ? 'the models, downloading now (2)' : state === 'failed' ? 'the models: press Try again (2)' : 'the models, which download when you save (2)')].filter(Boolean)
+    $('#swapState').textContent = !f.guestSwap.checked ? '' : missing.length ? `Still needed before guests see face swap: ${missing.join(' and ')}.` : 'Ready after Save: guests find 🎭 Face swap on the editing screen.'
   }
   $('#settingsForm').addEventListener('change', () => status())
 
-  // Once per booth, when the app has a models address: a load fetches the swap model this GPU uses, and switching to a
-  // blank image fetches the identity model (setIdentity loads it before the face search fails). A second load fetches
-  // the other swap model if the first one's benchmark settled on a backend that needs it. Then the booth swaps offline.
+  // Once per booth: a load fetches the swap model this GPU uses, and switching to a blank image fetches the identity
+  // model (setIdentity loads it before the face search fails). A second load fetches the other swap model if the first
+  // one's benchmark settled on a backend that needs it. Then the booth swaps offline.
   let installing
   const install = () => (installing ??= (async () => {
-    if (settings.swapReady || !settings.swapOnline) return status()
+    if (settings.swapReady) return
     const got = {}
+    state = 'busy'
+    status()
     onProgress = ({ model, loaded, total }) => {
       got[model] = [loaded, total]
       const [l, t] = Object.values(got).reduce(([a, b], [c, d]) => [a + c, b + d], [0, 0])
-      status(l < t ? `Downloading face swap (once): ${Math.round((100 * l) / t)}%` : 'Preparing face swap. The first time takes a few minutes.')
+      status(l < t ? `downloading ${Math.round((100 * l) / t)}%` : 'getting ready (a few minutes, this one time)')
     }
     try {
       for (let pass = 0; pass < 2; pass++) {
@@ -67,18 +76,23 @@ const Swap = (() => {
         s.dispose()
         engine = null
       }
-      settings.swapReady = (await booth.getSettings()).swapReady
     } catch (e) {
       console.info('Face swap download failed:', e.message)
     }
+    settings.swapReady = (await booth.getSettings()).swapReady
     onProgress = () => {}
+    state = settings.swapReady ? '' : 'failed'
     status()
+    toast(settings.swapReady ? 'Face swap is ready.' : "Face swap couldn't download its models. Check the internet connection, then ⚙️ → Face swap → Try again.")
   })().finally(() => { installing = null }))
 
   // Loading takes a few seconds (and minutes the very first time on a machine, while the GPU compiles its shaders),
   // so it starts in the background at launch; after that a swap takes about 0.2 s on an M-series Mac.
   const on = () => settings.guestSwap && settings.swapReady
   const warm = () => { if (on()) load().then(() => reset()).catch(e => console.warn('Face swap warm-up failed:', e)) }
+  // At launch and whenever the settings change: the first time face swap is on, its models are fetched.
+  const ensure = () => (settings.guestSwap && !settings.swapReady && state !== 'failed' ? install() : Promise.resolve()).then(warm)
+  $('#swapGet').onclick = () => { state = ''; install().then(warm) }
 
   // Live characters: the biggest face of each scene, with its picture for the start screen.
   let cast = { key: null, list: [] }, live = null
@@ -144,14 +158,5 @@ const Swap = (() => {
     box.hidden = false
   }
 
-  // The operator's own copy of the models, from a folder: checked against their fingerprints and kept (main.js).
-  $('#swapInstall').onclick = async () => {
-    const r = await booth.installFaceModels()
-    if (!r) return
-    settings.swapReady = r.ready
-    status(r.ready ? undefined : `That folder is missing ${r.missing.join(' and ')}, or the files don't match the models this version uses.`)
-    if (r.ready) warm()
-  }
-
-  return { into, install, warm, reset, status }
+  return { into, ensure, reset, status }
 })()

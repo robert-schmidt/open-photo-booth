@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-25
+
+### Changed
+
+- **Much smaller downloads:** about 150 MB instead of 1 GB. The face swap models are no longer inside the installers. The booth downloads them once, the first time face swap is turned on (about 450 to 700 MB, needs internet that one time), and works offline after that.
+- The setup guide, the start screen and **Settings → Face swap** say when that download will happen, show its progress, and offer **Download now** and **Try again**.
+
+### Removed
+
+- **Install from folder…** for the face swap models: the booth fetches them itself.
+
 ## [0.2.0] - 2026-11-25
 
 ### Added
@@ -63,6 +74,7 @@ First public release.
 - **Input:** `Space`/`Enter` start a session, for USB buttons and foot pedals.
 - **Installers:** macOS (Apple Silicon and Intel, ad-hoc signed) and Windows, built and published by GitHub Actions.
 
-[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/robert-schmidt/open-photo-booth/releases/tag/v0.1.0

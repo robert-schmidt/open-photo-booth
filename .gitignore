@@ -4,7 +4,6 @@ dist/
 camera-helper/build/
 drivers
 vendor/
-face-models/
 # e2e screenshots the README doesn't use
 docs/boomerang.jpg
 docs/capture-framed.jpg

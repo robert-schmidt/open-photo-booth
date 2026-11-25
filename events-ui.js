@@ -47,7 +47,7 @@ const Events = (() => {
   }
 
   // After the camera has started; during the setup guide there are no settings yet, so it waits.
-  const warm = () => (settings ? (AI.warm(), Swap.install().then(Swap.warm)) : setTimeout(warm, 1500))
+  const warm = () => (settings ? AI.warm() : setTimeout(warm, 1500))
   setTimeout(warm, 1500)
   return { fillSettings }
 })()

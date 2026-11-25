@@ -61,6 +61,7 @@ async function applySettings() {
   await loadTemplates()
   await startCamera()
   Capture.attract()
+  Swap.ensure()
 }
 
 function grab() {
