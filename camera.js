@@ -128,5 +128,10 @@ const Camera = (() => {
     return `In use: ${w} × ${h}.${w * h < 1920 * 1080 ? ' Photos will look soft in print. A camera in webcam mode or behind an HDMI capture card does better.' : ''}`
   }
 
-  return { open, close, list, controlled, photo, focus, idle, info }
+  // The camera's own settings (exposure mode, ISO, flash…) as it offers them right now: { props, flash }, or null with
+  // a webcam. They live in the camera, not in the event: setProp changes one there, to the index-th value on offer.
+  const props = () => (controlled() ? booth.camera.props().catch(() => null) : Promise.resolve(null))
+  const setProp = (key, index) => booth.camera.set(key, index)
+
+  return { open, close, list, controlled, photo, focus, idle, info, props, setProp }
 })()

@@ -180,6 +180,10 @@ Good to know:
 
 - Set the camera to save JPEG (or RAW + JPEG), turn its auto power off off, and use a dummy battery for long events.
 - The booth focuses at "1" in the countdown. **Settings → Camera → Test shot** checks focus, exposure and flash before guests arrive.
+- **Camera settings** appear under **Settings → Camera** once a controlled camera is in use: exposure mode, ISO, shutter speed, aperture, brightness, white balance, flash and flash strength. They are the camera's own settings, so a change takes effect at once and stays in the camera. Anything greyed out is decided on the camera (its mode dial, or the exposure mode).
+  - **Auto** lets the camera work out the exposure for every photo, with its flash on if it has one. Good for a room where the light changes.
+  - **Set exposure from test shots** takes a few test shots and adjusts the camera until they come out right. With the camera in **M** it changes the ISO and leaves your shutter and aperture alone, which is how to set up studio flashes; in the other modes it changes the brightness (exposure compensation).
+  - **Flash:** a flash on the camera fires with the camera's shutter. Live view can't show a flash, so judge it from a test shot. Studio flashes on a radio trigger aren't seen by the camera at all: use **M**, about 1/125 s, and set the exposure from test shots.
 - If the camera is unplugged or its battery dies mid-event, the booth carries on with a webcam and switches back when the camera returns.
 - Live view pauses after 10 idle minutes on the start screen to keep the camera cool, and resumes at the next touch.
 - This is new. The camera code is written against Sony's and Nikon's SDKs and checked with a simulated camera, but has had little time on real bodies, and the Windows side is untested. Please [report](https://github.com/robert-schmidt/open-photo-booth/issues) what works and what doesn't, with your camera model.

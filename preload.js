@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld('booth', {
     focus: () => ipcRenderer.invoke('camera:focus'),
     live: on => ipcRenderer.invoke('camera:live', on),
     status: () => ipcRenderer.invoke('camera:status'),
+    props: () => ipcRenderer.invoke('camera:props'),
+    set: (key, index) => ipcRenderer.invoke('camera:set', key, index),
     sim: what => ipcRenderer.invoke('camera:sim', what), // tests: unplug, plug, crash or hang the simulated camera
   },
   onCameraFrame: fn => ipcRenderer.on('camera:frame', (_e, jpeg) => fn(jpeg)),

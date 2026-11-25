@@ -76,6 +76,21 @@ const misty = E.apply(img(200, 100, x => [90 + x / 2, 90 + x / 2, 110 + x / 2]))
 const ms = stats(misty)
 assert.ok(ms.hi - ms.lo > 160, `range of about 100 stretched by the full 1.6x: ${ms.lo}..${ms.hi}`)
 assert.ok(Math.abs(ms.m[2] - ms.m[0]) < 12, `blue tint reduced: ${ms.m.map(Math.round)}`)
+// Exposure from a test shot: a frame two stops under mid grey asks for two more stops, and the camera's nearest values
+// bring the next shot to within a third of a stop, by exposure compensation or (in manual) by ISO. Auto is never picked.
+const lit = stops => { const v = Math.round(255 * (0.18 * 2 ** stops) ** (1 / 2.2)); return img(320, 200, () => [v, v, v]) }
+assert.ok(Math.abs(E.exposure(lit(-2)) - 2) < 0.1 && Math.abs(E.exposure(lit(0))) < 0.1, `metered: ${E.exposure(lit(-2))}, ${E.exposure(lit(0))}`)
+assert.ok(E.exposure(img(320, 200, x => (x > 100 && x < 140 ? [255, 255, 255] : [40, 40, 40]))) <= -0.5, 'blown highlights are never called too dark')
+const evs = ['-2.0', '-1.7', '-1.3', '-1.0', '-0.7', '-0.3', '0', '+0.3', '+0.7', '+1.0', '+1.3', '+1.7', '+2.0'], isos = ['Auto', '100', '200', '400', '800', '1600', '3200']
+for (const [options, start, iso] of [[evs, 6, false], [isos, 2, true]]) {
+  for (const scene of [-1.6, -0.5, 1.2]) { // how far off the scene is at the starting value
+    const at = i => (iso ? Math.log2(parseFloat(options[i]) / parseFloat(options[start])) : parseFloat(options[i]) - parseFloat(options[start]))
+    const next = E.nearest(options, start, E.exposure(lit(scene)), iso)
+    assert.ok(options[next] !== 'Auto' && Math.abs(E.exposure(lit(scene + at(next)))) <= (iso ? 0.55 : 0.2), `${iso ? 'ISO' : 'EV'} for a scene ${scene} off: ${options[next]}`)
+  }
+}
+assert.equal(E.nearest(evs, 12, 3, false), 12, 'stays at the end of the range')
+assert.equal(E.nearest(isos, 0, 1, true), 0, 'Auto ISO is left alone')
 const fine = img(256, 64, (x, y) => [x, x, Math.min(255, x + (y % 2))])
 const before = Uint8ClampedArray.from(fine.data), after = E.apply(fine).data
 assert.ok(after.every((v, i) => Math.abs(v - before[i]) <= 12), 'a well-exposed image stays close')

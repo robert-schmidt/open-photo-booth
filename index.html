@@ -28,6 +28,8 @@
   #count { font-size: 40vh; font-weight: 800; text-shadow: 0 0 60px rgba(0,0,0,.6); }
   /* During a photo countdown, the preview is just the shape of the layout's photo (see frame() in app.js). */
   body.framed[data-screen="capture"] #video { margin: auto; width: min(100vw, calc(100vh * var(--a))); height: min(100vh, calc(100vw / var(--a))); transition: object-position .4s ease-out; }
+  .cam-props { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; align-items: center; margin-bottom: 8px; }
+  .cam-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
   #testShotImg { display: block; max-width: 100%; max-height: 180px; margin-top: 8px; border-radius: 8px; }
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
   #flash.on { animation: flash .6s ease-out; }
@@ -310,6 +312,12 @@
         <h3>Camera</h3>
         <label for="cameraId">Camera</label><select id="cameraId" name="cameraId"></select>
         <span></span><div><p id="cameraInfo" class="hint"></p><button type="button" id="testShot" hidden>Test shot</button><img id="testShotImg" alt="Test shot" hidden></div>
+        <label id="camPropsLabel" hidden>Camera settings</label>
+        <div id="camProps" hidden>
+          <div id="camPropList" class="cam-props"></div>
+          <div class="cam-actions"><button type="button" id="camAuto">Auto</button><button type="button" id="camMatch">Set exposure from test shots</button></div>
+          <p id="camPropsNote" class="hint"></p>
+        </div>
         <span></span><details id="supportedCameras" class="hint"><summary>Cameras the booth controls over USB (beta): shutter, flash, full-resolution photos. Any other works as a webcam.</summary></details>
         <label for="micId">Microphone (video messages)</label><select id="micId" name="micId"></select>
         <label for="mirror">Mirror camera</label><input id="mirror" name="mirror" type="checkbox">

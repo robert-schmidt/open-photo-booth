@@ -136,9 +136,18 @@ async function live(on) { ready(); await call('live', on ? '1' : '0') }
 // The open camera's name and battery ("AC", "80%" or "").
 async function status() { ready(); const { name, battery } = await call('status'); return { name, battery } }
 
+// The open camera's own settings (Prop in camera-helper/helper.h) and its flash: "ready", "charging", "none" or "".
+async function props() { ready(); const { props, flash } = await call('props'); return { props, flash } }
+// Changes one to the index-th value the camera offers. Checked here: the command goes to the helper as a line of text.
+async function set(key, index) {
+  ready()
+  if (!/^\w+$/.test(key) || !Number.isInteger(index) || index < 0) throw new Error('not a camera setting')
+  await call('set', `${key} ${index}`)
+}
+
 // Tests only (the simulated camera): unplug, plug, crash or hang.
 const sim = what => call('sim', what)
 
 app.on('will-quit', () => { helper?.stdin.end(); fs.rm(dir, { recursive: true, force: true }) }) // the helper lets go of the camera and exits
 
-module.exports = { list, open, close, shoot, focus, live, status, sim }
+module.exports = { list, open, close, shoot, focus, live, status, props, set, sim }

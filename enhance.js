@@ -32,7 +32,35 @@ const Enhance = (() => {
     return img
   }
 
-  return { apply }
+  // How many stops a photo is from a good exposure; above zero, it should be brighter. Measured where guests stand (the
+  // middle of the frame), in linear light, against mid grey (18%), like a camera's centre-weighted meter. A frame with
+  // blown highlights (a flash too strong) is never called too dark.
+  function exposure({ data, width, height }) {
+    let sum = 0, n = 0, blown = 0
+    const stepX = Math.max(1, Math.floor(width / 160)), stepY = Math.max(1, Math.floor(height / 160))
+    for (let y = Math.floor(height * 0.15); y < height * 0.85; y += stepY) {
+      for (let x = Math.floor(width * 0.2); x < width * 0.8; x += stepX, n++) {
+        const i = (y * width + x) * 4, v = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+        sum += (v / 255) ** 2.2
+        if (v >= 250) blown++
+      }
+    }
+    const stops = clamp(Math.log2(0.18 / Math.max(sum / n, 1e-4)), -3, 3)
+    return blown > n * 0.05 ? Math.min(stops, -0.5) : stops
+  }
+
+  // The camera value nearest to `stops` away from the current one, as an index into its options. Exposure
+  // compensation is in stops already ("+0.3"); ISO doubles per stop ("400"). Values that aren't numbers (Auto) are skipped.
+  function nearest(options, current, stops, iso) {
+    const val = o => (iso ? Math.log2(parseFloat(o)) : parseFloat(o))
+    const want = val(options[current]) + stops
+    if (isNaN(want)) return current
+    let best = current
+    options.forEach((o, i) => { if (Math.abs(val(o) - want) < Math.abs(val(options[best]) - want)) best = i })
+    return best
+  }
+
+  return { apply, exposure, nearest }
 })()
 
 if (typeof module !== 'undefined') module.exports = Enhance

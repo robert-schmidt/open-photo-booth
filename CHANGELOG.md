@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **Camera settings in the app**, for cameras the booth controls over USB (Sony, Nikon Z): exposure mode, ISO, shutter speed, aperture, brightness (exposure compensation), white balance, flash mode and flash strength, under **Settings → Camera**. Each list shows what the camera offers right now, and a change goes to the camera at once. What the camera's own dial decides is shown greyed out.
+- **Auto** hands the exposure to the camera for every photo (program auto, auto ISO and white balance, no compensation), and turns its flash on when one is found.
+- **Set exposure from test shots** takes up to four test shots, measures each, and adjusts the camera until the photo is well exposed: by ISO when the camera is in manual (the way to shoot with studio flashes), by exposure compensation otherwise. It measures real photos, so the flash is in them.
+- The settings say whether the camera's flash is ready (Nikon; Sony cameras don't report it).
+- `camera-helper probe` also lists the camera's settings.
+
+These are checked with the simulated camera only; like the rest of camera control, they haven't been tried on real Sony or Nikon bodies yet.
+
 ## [0.2.1] - 2026-11-25
 
 ### Changed

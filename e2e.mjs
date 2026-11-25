@@ -137,6 +137,30 @@ try {
   await until(`document.querySelector('#cameraInfo').textContent.includes("Simulated camera (full-resolution photos), on mains power. Photos at the camera's full resolution, live view at 1024")`)
   await evaluate('document.querySelector("#testShot").click()')
   await until(`!document.querySelector('#testShotImg').hidden && document.querySelector('#cameraInfo').textContent.startsWith('Test shot: ')`)
+  // The camera's own settings are in the panel and change on the camera. In Auto the (simulated) camera picks its ISO
+  // itself; in manual the booth sets it, and test shots then move it to suit the scene. Auto hands the exposure back
+  // to the camera, with its flash on.
+  const prop = k => `document.querySelector('#camPropList select[data-prop=${k}]')`
+  const propShown = k => evaluate(`${prop(k)}.selectedOptions[0].text`)
+  const onCamera = k => evaluate(`booth.camera.props().then(r => r.props.find(p => p.key === '${k}')).then(p => p.options[p.value])`)
+  const choose = (k, text) => evaluate(`(s => { s.value = [...s.options].find(o => o.text === ${JSON.stringify(text)}).value; s.dispatchEvent(new Event('change')) })(${prop(k)})`)
+  const note = `document.querySelector('#camPropsNote').textContent`
+  await until(`!document.querySelector('#camProps').hidden && document.querySelectorAll('#camPropList select').length === 8`)
+  assert.ok(await evaluate(`${prop('iso')}.disabled && !${prop('mode')}.disabled && ${note}.startsWith('Flash: ready.')`), 'in Auto the camera decides the ISO; its flash is found')
+  await choose('mode', 'M (manual)')
+  await until(`${prop('iso')} && !${prop('iso')}.disabled`)
+  await choose('iso', '400')
+  await until(`${prop('iso')}.selectedOptions[0].text === '400' && !${prop('iso')}.disabled`)
+  assert.deepEqual([await onCamera('mode'), await onCamera('iso')], ['M (manual)', '400'])
+  assert.equal(await evaluate(`booth.camera.set('iso 1\\n9 sim crash', 0).then(() => 'taken', () => 'refused')`), 'refused', 'only a setting name reaches the helper')
+  await evaluate(`document.querySelector('#camMatch').click()`)
+  await until(`!document.querySelector('#camMatch').disabled && /looks right|as far as it goes|after 4 test shots/.test(${note})`, 30000)
+  if (!(await evaluate(`${note}.includes('looks right')`))) assert.notEqual(await onCamera('iso'), '400', 'test shots moved the ISO')
+  await evaluate(`document.querySelector('#camAuto').click()`)
+  await until(`${note}.includes('works out the exposure itself')`, 8000)
+  assert.deepEqual([await propShown('mode'), await onCamera('iso'), await onCamera('flash'), await onCamera('ev')], ['P (program auto)', 'Auto', 'On (fill)', '0'])
+  await evaluate(`document.querySelector('#camProps').scrollIntoView({ block: 'center' })`)
+  await clean(); await shot('camera-settings.jpg')
   await evaluate('document.querySelector("#settings").close()')
   // After 10 quiet minutes on the start screen live view pauses, and a touch brings it back.
   const frames = 'video.getVideoPlaybackQuality().totalVideoFrames', moving = async () => { const a = await evaluate(frames); await sleep(600); return (await evaluate(frames)) > a }

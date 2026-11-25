@@ -1,4 +1,4 @@
-/* global booth, Layout, Events, Review, AI, Capture, Setup, Camera, CAMERAS */
+/* global booth, Layout, Events, Review, AI, Capture, Setup, Camera, CAMERAS, Enhance */
 const $ = s => document.querySelector(s)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const FILTERS = {
@@ -303,6 +303,7 @@ async function openSettings() {
   $('#cameraInfo').textContent = await Camera.info()
   $('#testShot').hidden = !Camera.controlled()
   $('#testShotImg').hidden = true
+  fillCamProps() // not waited for: a camera may take a moment to say what it offers
   fillTemplates()
   fill(form.filter, Object.entries(FILTERS).map(([k, [label]]) => [k, label]))
   fill(form.printer, [['', 'Ask each time (print dialog)'], ...(await booth.listPrinters()).map(p => [p.name, p.displayName || p.name])])
@@ -352,6 +353,99 @@ $('#import').onclick = async () => {
 $('#openEditor').onclick = () => { $('#settings').close(); Editor.open(form.templateId.value) }
 $('#openFolder').onclick = () => booth.openFolder()
 // A photo with the camera, to check focus, exposure and the flash before guests arrive. Not saved.
+// The controlled camera's own settings. They live in the camera, not in the event: a change goes to the camera at
+// once, without Save, and the list is read again, since one setting decides what the others offer.
+const CAM_PROPS = { mode: 'Exposure mode', iso: 'ISO', isoAuto: 'Auto ISO', shutter: 'Shutter speed', aperture: 'Aperture', ev: 'Brightness (+/−)', wb: 'White balance', flash: 'Flash', flashEv: 'Flash strength', preview: 'Live view' }
+const FLASH_NOTE = {
+  ready: 'Flash: ready. ', charging: 'Flash: charging. ',
+  none: 'No flash found on the camera. Studio flashes on a trigger still fire: use M (manual) for those. ',
+}
+let camProps = null
+async function fillCamProps(note) {
+  camProps = await Camera.props()
+  const has = !!camProps?.props.length
+  $('#camPropsLabel').hidden = $('#camProps').hidden = !has
+  if (!has) return
+  $('#camPropList').replaceChildren(...camProps.props.flatMap(p => {
+    const select = document.createElement('select')
+    fill(select, p.options.map((o, i) => [i, o]))
+    Object.assign(select, { value: p.value, disabled: !p.writable, ariaLabel: CAM_PROPS[p.key] || p.key, title: p.writable ? '' : 'The camera decides this: its mode dial or exposure mode' })
+    select.dataset.prop = p.key
+    select.onchange = async () => {
+      const failed = await Camera.setProp(p.key, select.selectedIndex).then(() => '', e => `${CAM_PROPS[p.key]}: ${e.message}`)
+      await sleep(400)
+      fillCamProps(failed || undefined)
+    }
+    return [Object.assign(document.createElement('span'), { textContent: CAM_PROPS[p.key] || p.key }), select]
+  }))
+  $('#camPropsNote').textContent = note ?? `${FLASH_NOTE[camProps.flash] || ''}These change on the camera straight away. Live view doesn't show a flash: judge it from a test shot.`
+}
+const camProp = key => camProps?.props.find(p => p.key === key)
+const camBusy = on => { for (const b of [$('#camAuto'), $('#camMatch'), $('#testShot')]) b.disabled = on }
+
+// Auto: the camera works out the exposure for every photo itself (program auto, auto ISO and white balance, no
+// compensation), with its flash on if it has one. What its dial decides is left alone, and named.
+$('#camAuto').onclick = async () => {
+  const kept = []
+  // Sets key to the first of the wanted values the camera offers.
+  const pick = async (key, ...wanted) => {
+    const p = camProp(key), i = p && wanted.map(w => p.options.findIndex(o => w.test(o))).find(i => i >= 0)
+    if (!p || i === undefined || i === p.value) return
+    if (!p.writable || !(await Camera.setProp(key, i).then(() => true, () => false))) kept.push(key === 'iso' ? 'ISO' : CAM_PROPS[key].toLowerCase())
+  }
+  camBusy(true)
+  try {
+    if (!/^(Auto|P )/.test(camProp('mode')?.options[camProp('mode').value] || '')) await pick('mode', /^P /, /^Auto$/)
+    await sleep(500)
+    camProps = (await Camera.props()) || camProps // the mode decides what the rest offer
+    await pick('iso', /^Auto$/)
+    await pick('isoAuto', /^On$/)
+    await pick('ev', /^0$/)
+    await pick('wb', /^Auto$/)
+    await pick('flashEv', /^0$/)
+    if (['ready', 'charging'].includes(camProps?.flash)) await pick('flash', /fill/, /^Auto$/, /^On/)
+    await sleep(500)
+    await fillCamProps(kept.length ? `Auto is set, except the ${kept.join(', the ')}: the camera decides ${kept.length > 1 ? 'those' : 'that'} itself (turn its mode dial to P or Auto).`
+      : `${FLASH_NOTE[camProps?.flash] || ''}The camera now works out the exposure itself for every photo. Take a test shot to see it.`)
+  } finally {
+    camBusy(false)
+  }
+}
+
+// Exposure from the scene: test shots, each measured (Enhance.exposure) and answered with a change on the camera, until
+// one comes out right. With the camera in manual and a fixed ISO (the way to shoot with studio flashes) the ISO moves;
+// otherwise the exposure compensation does. Shutter and aperture stay as the photographer set them.
+$('#camMatch').onclick = async () => {
+  camBusy(true)
+  let note = ''
+  try {
+    for (let shot = 1; shot <= 4 && !note; shot++) {
+      const c = await Camera.photo()
+      $('#testShotImg').src = c.toDataURL('image/jpeg', 0.8)
+      $('#testShotImg').hidden = false
+      const small = canvas(320, Math.round(320 * c.height / c.width)), x = small.getContext('2d')
+      x.drawImage(c, 0, 0, small.width, small.height)
+      const stops = Enhance.exposure(x.getImageData(0, 0, small.width, small.height)), what = stops > 0 ? 'too dark' : 'too bright'
+      if (Math.abs(stops) < 0.3) { note = `The exposure looks right (${shot} test shot${shot > 1 ? 's' : ''}).`; break }
+      camProps = (await Camera.props()) || camProps
+      const mode = camProp('mode'), iso = camProp('iso')
+      const manual = /^M/.test(mode?.options[mode.value] || '') && !/^Auto/.test(iso?.options[iso.value] || 'Auto')
+      const p = manual ? iso : camProp('ev'), name = manual ? 'ISO' : 'exposure compensation'
+      if (!p?.writable) { note = `The test shot is ${what}, and the camera doesn't let the booth change its ${name}: change it on the camera.`; break }
+      const next = Enhance.nearest(p.options, p.value, stops, manual)
+      if (next === p.value) { note = `The test shot is still ${what}, and the ${name} is as far as it goes (${p.options[next]}). ${stops > 0 ? 'Add light, open the aperture or slow the shutter.' : 'Close the aperture, speed up the shutter or turn the flash down.'}`; break }
+      await Camera.setProp(p.key, next)
+      await sleep(600)
+      if (shot === 4) note = `Still ${what} after 4 test shots; the ${name} is now ${p.options[next]}. Take a test shot to check.`
+    }
+  } catch (e) {
+    note = `That didn't work: ${e.message}`
+  } finally {
+    camBusy(false)
+  }
+  fillCamProps(note)
+}
+
 $('#testShot').onclick = async () => {
   const b = $('#testShot'), t = Date.now()
   b.disabled = true

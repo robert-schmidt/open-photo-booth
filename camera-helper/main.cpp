@@ -7,6 +7,8 @@
 //   live 1|0              live view on or off; frames come out as they arrive
 //   focus                 focus now (the booth does this at "1" in the countdown)
 //   status                the open camera: {"name","battery"}; battery is "AC", a percentage like "80%", or ""
+//   props                 the camera's settings: {"props":[{"key","value","writable","options":[…]}],"flash"} (see Prop in helper.h)
+//   set <key> <index>     change one of them to options[index]
 //   shoot                 take a photo with the camera's shutter: {"file"} is the camera's JPEG, in --dir
 //   close                 end the session
 //   sim <what>            the simulated camera only: unplug, plug, crash, hang
@@ -72,6 +74,29 @@ struct Sim : Backend {
   bool plugged = true, on = false, opened = false, hang = false;
   Clock::time_point last;
   int shots = 0;
+  // Its settings behave like a camera's: in Auto the camera picks ISO, shutter and aperture itself.
+  std::vector<Prop> settings = {
+    {"mode", {"Auto", "P (program auto)", "A (aperture priority)", "S (shutter priority)", "M (manual)"}, 0, true},
+    {"iso", {"Auto", "100", "200", "400", "800", "1600", "3200", "6400"}, 0, false},
+    {"shutter", {"1/250", "1/125", "1/60", "1/30"}, 1, false},
+    {"aperture", {"f/2.8", "f/4", "f/5.6", "f/8", "f/11"}, 2, false},
+    {"ev", {"-2.0", "-1.7", "-1.3", "-1.0", "-0.7", "-0.3", "0", "+0.3", "+0.7", "+1.0", "+1.3", "+1.7", "+2.0"}, 6, true},
+    {"wb", {"Auto", "Daylight", "Cloudy", "Incandescent", "Flash"}, 0, true},
+    {"flash", {"Off", "Auto", "On (fill)"}, 0, true},
+    {"flashEv", {"-1.0", "-0.7", "-0.3", "0", "+0.3", "+0.7", "+1.0"}, 3, true},
+  };
+  std::vector<Prop> props() override { return settings; }
+  void setProp(const std::string& key, int index) override {
+    for (auto& p : settings) if (p.key == key) {
+      if (!p.writable) throw Error("locked", "the camera decides this in its current mode");
+      if (index < 0 || index >= int(p.options.size())) throw Error("bad_value", "not one of the camera's values");
+      p.value = index;
+      if (key == "mode") for (auto& q : settings) if (q.key == "iso" || q.key == "shutter" || q.key == "aperture") q.writable = index != 0;
+      return;
+    }
+    throw Error("unsupported", "the camera has no such setting");
+  }
+  std::string flashUnit() override { return "ready"; }
   Sim(const fs::path& liveFile, fs::path photoFile) : photo(std::move(photoFile)) {
     std::ifstream in(liveFile, std::ios::binary);
     view.assign(std::istreambuf_iterator<char>(in), {});
@@ -153,7 +178,21 @@ static void handle(const std::string& line) {
     } else if (op == "live") open().live(arg == "1");
     else if (op == "focus") open().focus();
     else if (op == "status") extra = ",\"name\":" + quote(currentName) + ",\"battery\":" + quote(open().battery());
-    else if (op == "shoot") extra = ",\"file\":" + quote(open().shoot(dir));
+    else if (op == "props") {
+      std::string all;
+      for (auto& p : open().props()) {
+        std::string options;
+        for (auto& o : p.options) options += (options.empty() ? "" : ",") + quote(o);
+        all += (all.empty() ? "" : ",") + ("{\"key\":" + quote(p.key) + ",\"value\":" + std::to_string(p.value) + ",\"writable\":" + (p.writable ? "true" : "false") + ",\"options\":[" + options + "]}");
+      }
+      extra = ",\"flash\":" + quote(open().flashUnit()) + ",\"props\":[" + all + "]";
+    } else if (op == "set") {
+      std::istringstream a(arg);
+      std::string key;
+      int index = -1;
+      a >> key >> index;
+      open().setProp(key, index);
+    } else if (op == "shoot") extra = ",\"file\":" + quote(open().shoot(dir));
     else if (op == "close") { if (current) current->close(); current = nullptr; }
     else if (op == "sim") {
       Backend* sim = nullptr;
@@ -231,7 +270,7 @@ static int serve() {
 }
 
 // Probe: for trying a camera without the app. Lists the cameras, opens the first, counts live view frames for two
-// seconds, takes a photo and says where it went.
+// seconds, takes a photo and says where it went. It also lists the camera's settings.
 static int probe() {
   probing = true;
   auto say = [](const std::string& s) { std::cout << s << std::endl; };
@@ -245,6 +284,8 @@ static int probe() {
     b->open(f.camera.id);
     current = b;
     say("Opened " + f.camera.name + ", battery: " + b->battery());
+    for (auto& p : b->props()) say("  " + p.key + ": " + (p.value >= 0 && p.value < int(p.options.size()) ? p.options[p.value] : "?") + " (" + std::to_string(p.options.size()) + " values" + (p.writable ? ")" : ", decided on the camera)"));
+    say("  flash unit: " + (b->flashUnit().empty() ? "the camera doesn't say" : b->flashUnit()));
     b->live(true);
     for (auto end = Clock::now() + std::chrono::seconds(2); Clock::now() < end;) { pump(); b->tick(); }
     say("Live view: " + std::to_string(frames) + " frames in 2 s");

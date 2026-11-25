@@ -6,11 +6,13 @@
 // main thread. Its callbacks come on its own threads and leave what they bring for the main thread. Photos are sent to
 // the computer only (the camera needs no card), into the folder camera-helper is given.
 #include "helper.h"
+#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <map>
 #include <mutex>
 #include <thread>
 #ifdef __APPLE__
@@ -28,6 +30,41 @@ using NkChar = char;
 
 struct Nikon;
 static Nikon* self; // for the callbacks; there's one
+
+// The settings the app shows (Prop in helper.h), each with the module's capability for it.
+struct Setting { const char* key; ULONG cap; };
+static const Setting SETTINGS[] = {
+  {"mode", kNkMAIDCapability_ExposureMode}, {"iso", kNkMAIDCapability_Sensitivity}, {"isoAuto", kNkMAIDCapability_IsoControl},
+  {"shutter", kNkMAIDCapability_ShutterSpeed}, {"aperture", kNkMAIDCapability_Aperture}, {"ev", kNkMAIDCapability_ExposureComp},
+  {"wb", kNkMAIDCapability_WBMode}, {"flash", kNkMAIDCapability_FlashMode}, {"flashEv", kNkMAIDCapability_InternalFlashComp},
+};
+// The module's numbers as text, for the settings whose values aren't text already.
+static std::string label(ULONG cap, ULONG v) {
+  if (cap == kNkMAIDCapability_ExposureMode) switch (v) {
+    case kNkMAIDExposureMode_Program: return "P (program auto)";
+    case kNkMAIDExposureMode_AperturePriority: return "A (aperture priority)";
+    case kNkMAIDExposureMode_SpeedPriority: return "S (shutter priority)";
+    case kNkMAIDExposureMode_Manual: return "M (manual)";
+    case kNkMAIDExposureMode_Auto: return "Auto";
+    case kNkMAIDExposureMode_Portrait: return "Portrait";
+    case kNkMAIDExposureMode_FlashOff: return "Auto, flash off";
+    case kNkMAIDExposureMode_Scene: return "Scene";
+    case kNkMAIDExposureMode_Effects: return "Effects";
+  }
+  if (cap == kNkMAIDCapability_FlashMode) switch (v) {
+    case kNkMAIDFlashMode_FrontCurtain: return "On (front curtain)";
+    case kNkMAIDFlashMode_RearCurtain: case kNkMAIDFlashMode_RearCurtainSync: return "Rear curtain";
+    case kNkMAIDFlashMode_SlowSync: case kNkMAIDFlashMode_SlowSyncFillFlash: return "Slow sync";
+    case kNkMAIDFlashMode_RedEyeReduction: case kNkMAIDFlashMode_RedEyeReductionLighting: return "Red-eye reduction";
+    case kNkMAIDFlashMode_SlowSyncRedEyeReduction: case kNkMAIDFlashMode_SlowSyncRedEye: return "Slow sync, red-eye reduction";
+    case kNkMAIDFlashMode_SlowSyncRearCurtain: return "Slow sync, rear curtain";
+    case kNkMAIDFlashMode_Off: return "Off";
+    case kNkMAIDFlashMode_Auto: return "Auto";
+    case kNkMAIDFlashMode_On: return "On";
+    case kNkMAIDFlashMode_FillFlash: return "On (fill)";
+  }
+  return "Other (" + std::to_string(v) + ")";
+}
 
 struct Nikon : Backend {
   LPMAIDInitializeSDKProc initialize = nullptr;
@@ -49,6 +86,7 @@ struct Nikon : Backend {
   std::mutex mu; // what the callbacks bring:
   std::string lv; bool fresh = false;
   std::vector<fs::path> saved; bool failed = false;
+  std::map<ULONG, ULONG> ops; // what the open camera allows for each capability (kNkMAIDCapOperation bits), as it said on connecting
 
   // Runs f where the module's calls run, and waits for it.
 #ifdef __APPLE__
@@ -123,7 +161,11 @@ struct Nikon : Backend {
       run([&] {
         LPNkMAIDEnumCapInfo caps = nullptr;
         err = connect(which, &caps);
-        if (caps) free(caps->pCapArray), free(caps);
+        ops.clear();
+        if (caps) {
+          for (ULONG i = 0; i < caps->ulCapCount; i++) ops[caps->pCapArray[i].ulID] = caps->pCapArray[i].ulOperations;
+          free(caps->pCapArray), free(caps);
+        }
       });
       if (err != kNkMAIDResult_NoError) throw Error("refused", "the camera refused (" + std::to_string(err) + "): is Nikon's own tethering app open?");
       connected = true, openId = id, openName = camera.name;
@@ -215,6 +257,117 @@ struct Nikon : Backend {
 
   void set(ULONG cap, ULONG value) {
     run([&] { setCap(cap, &value, kNkMAIDDataType_UnsignedPtr); });
+  }
+
+  // What the module gave for a capability, freed as its sample does.
+  static void release(LPVOID data, eNkMAIDDataType type) {
+    if (data && type == kNkMAIDDataType_EnumPtr) free(static_cast<LPNkMAIDEnum>(data)->pData);
+    free(data);
+  }
+  // One setting, where the module's calls run: a list of values (texts packed one after another, or numbers), a range
+  // in steps, or a switch.
+  bool readProp(const Setting& s, Prop& out) {
+    auto found = ops.find(s.cap);
+    if (found == ops.end() || !(found->second & kNkMAIDCapOperation_Get)) return false;
+    out = {s.key, {}, -1, (found->second & kNkMAIDCapOperation_Set) != 0};
+    auto values = [&](LPNkMAIDEnum e) {
+      if (!e->pData) return;
+      if (e->ulType == kNkMAIDArrayType_PackedString) {
+        for (ULONG i = 0; i < e->ulElements;) { // as the module's sample walks them
+          const char* text = static_cast<const char*>(e->pData) + i;
+          out.options.push_back(text);
+          i += ULONG(strlen(text)) + 1;
+        }
+      } else if (e->ulType == kNkMAIDArrayType_Unsigned) {
+        for (ULONG i = 0; i < e->ulElements; i++) {
+          ULONG v = 0;
+          memcpy(&v, static_cast<const char*>(e->pData) + i * e->wPhysicalBytes, std::min<size_t>(sizeof v, size_t(e->wPhysicalBytes)));
+          out.options.push_back(label(s.cap, v));
+        }
+      }
+    };
+    LPVOID data = nullptr;
+    eNkMAIDDataType type = kNkMAIDDataType_Null;
+    if ((found->second & kNkMAIDCapOperation_GetArray) && getCap(s.cap, kNkSDKGetSettingSupportedValueArray, data, type) == kNkMAIDResult_NoError && data && type == kNkMAIDDataType_EnumPtr)
+      values(static_cast<LPNkMAIDEnum>(data));
+    release(data, type);
+    data = nullptr, type = kNkMAIDDataType_Null;
+    if (getCap(s.cap, kNkSDKGetSettingValue, data, type) != kNkMAIDResult_NoError || !data) { release(data, type); return false; }
+    if (type == kNkMAIDDataType_EnumPtr) {
+      auto* e = static_cast<LPNkMAIDEnum>(data);
+      if (out.options.empty()) values(e);
+      out.value = int(e->ulValue);
+    } else if (type == kNkMAIDDataType_RangePtr) {
+      auto* r = static_cast<LPNkMAIDRange>(data);
+      // ponytail: a range without steps shows its value only; none of the settings here has been seen to be one.
+      if (r->ulSteps < 2) out.options = {evText(r->lfValue)}, out.value = 0, out.writable = false;
+      else {
+        for (ULONG i = 0; i < r->ulSteps && i < 200; i++) out.options.push_back(evText(r->lfLower + i * (r->lfUpper - r->lfLower) / (r->ulSteps - 1)));
+        out.value = int(r->ulValueIndex);
+      }
+    } else if (type == kNkMAIDDataType_BooleanPtr) {
+      out.options = {"Off", "On"};
+      out.value = *static_cast<unsigned char*>(data) ? 1 : 0;
+    }
+    release(data, type);
+    return !out.options.empty();
+  }
+  std::vector<Prop> props() override {
+    std::vector<Prop> out;
+    if (!connected) return out;
+    run([&] { for (auto& s : SETTINGS) { Prop p; if (readProp(s, p)) out.push_back(std::move(p)); } });
+    return out;
+  }
+  void setProp(const std::string& key, int index) override {
+    for (auto& s : SETTINGS) {
+      if (key != s.key) continue;
+      if (index < 0) throw Error("bad_value", "not one of the camera's values");
+      NKERROR err = kNkMAIDResult_NotSupported;
+      run([&] {
+        LPVOID data = nullptr;
+        eNkMAIDDataType type = kNkMAIDDataType_Null;
+        if (getCap(s.cap, kNkSDKGetSettingValue, data, type) == kNkMAIDResult_NoError && data) {
+          if (type == kNkMAIDDataType_EnumPtr) {
+            NkMAIDEnum e = *static_cast<LPNkMAIDEnum>(data);
+            e.pData = nullptr, e.ulValue = ULONG(index);
+            err = setCap(s.cap, &e, kNkMAIDDataType_EnumPtr);
+          } else if (type == kNkMAIDDataType_RangePtr) {
+            NkMAIDRange r = *static_cast<LPNkMAIDRange>(data);
+            r.ulValueIndex = ULONG(index);
+            err = setCap(s.cap, &r, kNkMAIDDataType_RangePtr);
+          } else if (type == kNkMAIDDataType_BooleanPtr) {
+            unsigned char on = index != 0;
+            err = setCap(s.cap, &on, kNkMAIDDataType_BooleanPtr);
+          }
+        }
+        release(data, type);
+      });
+      if (err != kNkMAIDResult_NoError) throw Error("refused", "the camera refused the change (" + std::to_string(err) + "): its mode dial or exposure mode may decide this");
+      return;
+    }
+    throw Error("unsupported", "this camera doesn't have that setting");
+  }
+  // A speedlight on the camera, or its built-in flash raised.
+  std::string flashUnit() override {
+    std::string out;
+    if (!connected) return out;
+    auto number = [&](ULONG cap, ULONG& v) {
+      LPVOID data = nullptr;
+      eNkMAIDDataType type = kNkMAIDDataType_Null;
+      bool ok = ops.count(cap) && getCap(cap, kNkSDKGetSettingValue, data, type) == kNkMAIDResult_NoError && data && (type == kNkMAIDDataType_UnsignedPtr || type == kNkMAIDDataType_IntegerPtr);
+      if (ok) v = *static_cast<ULONG*>(data);
+      release(data, type);
+      return ok;
+    };
+    run([&] {
+      ULONG ext = 0, built = 0;
+      bool e = number(kNkMAIDCapability_ExternalFlashStatus, ext), b = number(kNkMAIDCapability_InternalFlashStatus, built);
+      if (e && ext == kNkMAIDExternalFlashStatus_Ready) out = "ready";
+      else if (b && (built == kNkMAIDInternalFlashStatus_Ready || built == kNkMAIDInternalFlashStatus_TTL)) out = "ready";
+      else if ((e && ext == kNkMAIDExternalFlashStatus_NotReady) || (b && built == kNkMAIDInternalFlashStatus_NotReady)) out = "charging";
+      else if (e || b) out = "none";
+    });
+    return out;
   }
 };
 
