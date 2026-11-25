@@ -12,6 +12,8 @@ Open Photo Booth's own code is MIT-licensed (see `LICENSE`). It ships with the c
 | browser-inswapper (Chronic Qual SRL), bundled in `vendor/faceswap/` | On-device face swap | PolyForm Noncommercial 1.0.0 (`vendor/faceswap/LICENSE.md`) | https://github.com/robert-schmidt/browser-inswapper |
 | ONNX Runtime Web 1.30.0 (in the face swap bundle) | Runs the face swap models on the GPU | MIT | https://www.npmjs.com/package/onnxruntime-web |
 | MediaPipe Tasks Vision 0.10.35 (in the face swap bundle) | Face tracking for the face swap | Apache-2.0 | https://www.npmjs.com/package/@mediapipe/tasks-vision |
+| qrcode-generator 2.0.4 (Kazuhiko Arase) | QR codes on the Share sheet | MIT | https://www.npmjs.com/package/qrcode-generator |
+| electron-updater 6.8.10 | Automatic updates | MIT | https://www.npmjs.com/package/electron-updater |
 
 The library's video-file features, which use mediabunny (MPL-2.0), are left out of the bundle. Emoji stickers are drawn with the operating system's own emoji font; no emoji images are shipped.
 

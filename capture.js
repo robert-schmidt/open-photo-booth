@@ -1,7 +1,7 @@
 /* global booth, $, settings, current: writable, template, compose, save, printCurrent, show, screen, toast, canvas, sleep, stream, video, startSession, FILTERS, FX, Review, Swap */
 // Capture modes. Guests pick Photos, Boomerang or Video message on the start screen (the event chooses which).
-// A boomerang is a short burst played forward and back; a video message has sound. Both save as MP4 and take a look;
-// a boomerang also makes a flip-book layout of its frames, which is what Print prints.
+// A boomerang is a short burst played forward and back; a video message has sound. Both save as MP4, take a look, and
+// share like photos; a boomerang also makes a flip-book layout of its frames, which is what Print prints.
 const Capture = (() => {
   const MODES = [['photo', '📸', 'Photos'], ['boomerang', '🔁', 'Boomerang'], ['video', '🎬', 'Video message']]
   const FPS = 15, FRAMES = 24 // 1.6 s of movement
@@ -70,7 +70,7 @@ const Capture = (() => {
     }
     $('#status').textContent = ''
     const stamp = stampNow()
-    current = { kind: 'boomerang', frames, look: look(), stamp }
+    current = { kind: 'boomerang', frames, look: look(), stamp, key: Review.newKey() }
     // The flip-book layout is saved right away, like a photo session; the MP4 is made when the guest finishes.
     current.sheet = flipbook(frames, current.look)
     current.saved = save(current.sheet, `${stamp}.jpg`).then(file => ({ stamp, file }))
@@ -117,7 +117,7 @@ const Capture = (() => {
       mic?.getTracks().forEach(t => t.stop()) // also when recording fails, so the microphone light goes off
     }
     const stamp = stampNow(), blob = new Blob(chunks, { type })
-    current = { kind: 'video', blob, stamp, look: look(), still: grabSmall() }
+    current = { kind: 'video', blob, stamp, key: Review.newKey(), look: look(), still: grabSmall() }
     current.clip = booth.savePhoto(`${stamp}.${ext(type)}`, await blob.arrayBuffer()) // saved at once: nothing lost if the booth closes
     current.clip.catch(e => toast(`Could not save: ${e.message}`))
     booth.logSession({ type: 'session', mode: 'video', stamp })
@@ -168,7 +168,7 @@ const Capture = (() => {
     return new Blob(chunks, { type: blob.type })
   }
 
-  // Review for boomerangs and videos: the clip plays on a loop, with Retake, Print (boomerang) and Done.
+  // Review for boomerangs and videos: the clip plays on a loop, with Retake, Share, Print (boomerang) and Done.
   function open() {
     const boom = current.kind === 'boomerang', c = current
     $('#clipCanvas').hidden = !boom
@@ -176,6 +176,8 @@ const Capture = (() => {
     $('#clipLooksTool').hidden = !settings.guestLooks
     $('#clipPrint').hidden = !boom || settings.autoPrint
     $('#clipPrint').disabled = false
+    $('#clipShare').hidden = true
+    booth.shareBase().catch(() => '').then(base => { c.share = base; if (current === c) $('#clipShare').hidden = !base })
     if (boom) {
       Object.assign($('#clipCanvas'), { width: c.frames[0].width, height: c.frames[0].height })
       const seq = [...c.frames, ...c.frames.slice(1, -1).reverse()], ctx = $('#clipCanvas').getContext('2d')
@@ -232,26 +234,28 @@ const Capture = (() => {
   document.addEventListener('pointerdown', () => { if (screen() === 'clip') poke() })
   document.addEventListener('keydown', () => { if (screen() === 'clip') poke() })
 
-  // Saving and printing carry on after the guest has gone: the next guest can start straight away.
+  // Saving, sharing and printing carry on after the guest has gone: the next guest can start straight away.
   function finish(print = settings.autoPrint && current.kind === 'boomerang') {
     if (screen() !== 'clip') return
     const c = current
     clearTimeout(timer)
     cancelAnimationFrame(frame)
     unload()
+    Review.share(false)
     if (c.kind === 'boomerang') {
       const sheet = flipbook(c.frames, c.look)
       if (c.look !== 'none') c.saved = c.saved.then(async r => ({ ...r, file: await save(sheet, `${c.stamp}.jpg`) }))
       c.sheet = sheet
       c.clip = encode(c.frames, c.look).then(async blob => booth.savePhoto(`${c.stamp}.${ext(VIDEO)}`, await blob.arrayBuffer()))
     } else if (c.look !== 'none') {
-      // The plain video is already saved: if restyling fails, that one is kept.
+      // The plain video is already saved: if restyling fails, that one is kept (and shared).
       c.clip = c.clip.then(file => restyle(c.blob, c.look).then(async blob => booth.savePhoto(`${c.stamp}.${ext(c.blob.type)}`, await blob.arrayBuffer()), e => {
         console.warn('Could not restyle the video:', e)
         return file
       }))
     }
     c.clip.catch(e => toast(`Could not save: ${e.message}`))
+    if (c.share) c.clip.then(file => booth.sharePhoto({ key: c.key, file })).catch(e => toast(`Could not share: ${e.message}`))
     if (print) printCurrent()
     Swap.reset()
     show('attract')
@@ -259,8 +263,10 @@ const Capture = (() => {
 
   $('#clipDone').onclick = () => finish()
   $('#clipPrint').onclick = () => finish(true)
+  $('#clipShare').onclick = () => Review.share(true)
   $('#clipRetake').onclick = () => {
     const mode = current.kind
+    Review.share(false) // its QR code is for the clip being thrown away
     clearTimeout(timer)
     cancelAnimationFrame(frame)
     unload()

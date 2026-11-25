@@ -1,4 +1,4 @@
-/* global AI, Vision, Layout, canvas, FILTERS */
+/* global AI, Vision, Layout, canvas, FILTERS, Enhance */
 // GPU photo effects. One shared WebGL2 context runs a fragment shader over a canvas and returns a new 2D canvas.
 const FX = (() => {
   let gl
@@ -227,5 +227,22 @@ void main() {
   // Listed with the CSS looks so the settings and the review screen offer them; review.js runs them through FX.ART.
   for (const [k, [label]] of Object.entries(ART)) FILTERS[k] = [label, 'none']
 
-  return { run, glam, background, chromaKey, BACKDROPS, ART }
+  // The event's .cube colour presets ([{ name, text }], from its looks folder) as extra looks, named after their files.
+  // Like the art looks they are for photos; boomerangs and videos keep the looks a CSS filter can do.
+  function luts(files) {
+    for (const k of Object.keys(ART)) if (k.startsWith('lut:')) { delete ART[k]; delete FILTERS[k] }
+    for (const { name, text } of files) {
+      const table = Enhance.cube(text)
+      if (!table) { console.warn(`${name}.cube isn't a 3D colour table: skipped`); continue }
+      FILTERS[`lut:${name}`] = [name, 'none']
+      ART[`lut:${name}`] = [name, src => {
+        const out = canvas(src.width, src.height), ctx = out.getContext('2d', { willReadFrequently: true })
+        ctx.drawImage(src, 0, 0)
+        ctx.putImageData(Enhance.lut(ctx.getImageData(0, 0, out.width, out.height), table), 0, 0)
+        return out
+      }]
+    }
+  }
+
+  return { run, glam, background, chromaKey, luts, BACKDROPS, ART }
 })()

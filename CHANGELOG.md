@@ -5,6 +5,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **Photos to guests' phones, over your own Wi-Fi.** With it on for an event, the editing screen has a Share button: its QR code opens the photo, boomerang or video on the guest's phone, served by the booth's computer. Nothing goes online; phones must be on the same network as the booth.
+- **Guests can draw and sign on their photos** with a finger: six colours, three pen widths, Undo and Clear. Off until you turn it on for an event.
+- **`.cube` colour presets as looks.** Point an event at a folder of `.cube` files (3D LUTs) and each becomes a look for photos, for guests to pick and as the event's default.
+- **Start screen pictures.** A folder of images shows on the start screen in place of the camera view: one is a background, several play as a slideshow.
+- **The app updates itself.** It asks this project's GitHub releases for a new version every few hours, downloads it and installs it when the booth is idle, never during a session. One switch in the settings turns it off. Versions up to 0.3.2 don't have this: install the next one by hand, once. Not yet tried on Windows.
+
+### Changed
+
+- The setup guide asks how guests get their photos (on their phone, printed).
+
 ## [0.3.2] - 2026-11-25
 
 ### Changed

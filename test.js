@@ -95,6 +95,16 @@ const fine = img(256, 64, (x, y) => [x, x, Math.min(255, x + (y % 2))])
 const before = Uint8ClampedArray.from(fine.data), after = E.apply(fine).data
 assert.ok(after.every((v, i) => Math.abs(v - before[i]) <= 12), 'a well-exposed image stays close')
 
+// .cube colour presets: a table that changes nothing leaves a photo as it was, one that swaps red and blue swaps them
+// (between its entries too), and text that isn't a full table is refused.
+const cubeText = (n, f) => `TITLE "t"\n# a comment\nLUT_3D_SIZE ${n}\nDOMAIN_MIN 0 0 0\n` + Array.from({ length: n ** 3 }, (_, i) => f(i % n / (n - 1), Math.floor(i / n) % n / (n - 1), Math.floor(i / n / n) / (n - 1)).join(' ')).join('\r\n')
+const ramp = () => img(64, 64, (x, y) => [x * 4, y * 4, (x * 7 + y * 3) % 256])
+const same = E.lut(ramp(), E.cube(cubeText(2, (r, g, b) => [r, g, b]))), swapped = E.lut(ramp(), E.cube(cubeText(5, (r, g, b) => [b, g, r])))
+assert.ok(same.data.every((v, i) => Math.abs(v - ramp().data[i]) <= 1), 'an identity table changes nothing')
+assert.ok(swapped.data.every((v, i) => Math.abs(v - ramp().data[i % 4 === 0 ? i + 2 : i % 4 === 2 ? i - 2 : i]) <= 1), 'red and blue swapped')
+assert.equal(E.cube(cubeText(3, (r, g, b) => [r, g, b]).split('\n').slice(0, -1).join('\n')), null, 'a table with a row missing is refused')
+assert.equal(E.cube('hello'), null)
+
 // main.js keeps a downloaded face swap model only if it has the fingerprint browser-inswapper checks before using it.
 const lib = fs.readFileSync(path.join(__dirname, 'node_modules/browser-inswapper/src/models.ts'), 'utf8'), main = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8')
 for (const k of ['swapperFp16', 'swapperFp32', 'arcface']) assert.ok(main.includes(new RegExp(`${k}: '([0-9a-f]{64})'`).exec(lib)[1]), `main.js has ${k}'s fingerprint`)

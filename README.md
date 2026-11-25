@@ -137,6 +137,7 @@ Open settings with the **⚙️ in the top-right corner of the start screen** or
 | **Event**, **New**, **Remove** | The event in use. **New** starts another one as a copy of the current event and opens the setup guide. **Remove** takes an event off the list; its photos stay |
 | **Event name** | Shown on the start screen, used for `{event}` in layouts and in the name of this event's photo folder |
 | **Start button text** | The text on the start button ("Touch to start", "Tap for photos!", in any language) |
+| **Start screen pictures** | A folder of images shown on the start screen in place of the camera view: one is a background, several play as a slideshow until a guest starts. (Not with live face swap characters, where guests need to see themselves) |
 | **Camera** | Which camera to use. A camera the booth controls is marked *controlled over USB*; the line below says what the camera in use delivers, and **Test shot** takes one photo with it |
 | **Microphone** | For video messages |
 | **Mirror camera** | Flips the preview and photos like a mirror (what most guests expect) |
@@ -152,12 +153,15 @@ Open settings with the **⚙️ in the top-right corner of the start screen** or
 | **Finish after no touch for** | Seconds of no touch before the editing screen finishes on its own |
 | **Save photos to** | The main photos folder; each event gets a subfolder |
 | **Guests can make** | Photos, boomerangs, video messages (and the video's length) |
-| **Guest tools** | Which tools guests see: looks, retake, backgrounds, stickers. Fewer tools keep a long queue moving. Point **Your backgrounds** and **Your stickers** at folders of your own images |
+| **Your looks** | A folder of `.cube` colour presets (3D LUTs, as Resolve, Photoshop and most grading tools export). Each file becomes a look for photos, named after the file, for guests and as the event's default look. Boomerangs and videos keep the built-in looks |
+| **Guest tools** | Which tools guests see: looks, retake, backgrounds, stickers, drawing. Fewer tools keep a long queue moving. Point **Your backgrounds** and **Your stickers** at folders of your own images. With **draw and sign** on, guests write on their photos with a finger, in six colours and three pen widths |
+| **Guests get their photo on their phone** | A **Share** button on the editing screen shows a QR code; scanning it opens the photo, boomerang or video on the guest's phone, served by this computer. See [Photos to phones](#photos-to-phones) |
 | **Printer** | *Ask each time* shows the print dialog; choosing a printer prints silently |
 | **Copies** | Copies per print |
 | **Print automatically** | Prints every session without anyone pressing Print |
 | **Print strips 2-up (4×6)** | Prints a 2×6 strip twice side by side on 4×6 paper, ready to cut in half |
 | **Fullscreen kiosk** | Locks the booth fullscreen. Use **Quit** in settings to close the app |
+| **Get new versions automatically** | On by default: every few hours the app asks this project's GitHub releases for a new version, downloads it, and installs it once the start screen has been untouched for 15 minutes (or when you quit). Never during a session. Turn it off for a booth that must not change mid-season; it counts from the next start |
 | **Settings PIN** | If set, the PIN is required to open settings; leave empty to disable |
 
 The camera, microphone, printer, photos folder, kiosk mode and PIN belong to the computer; everything else is kept per event.
@@ -348,9 +352,18 @@ Use **Settings → Open photos** to jump to the folder. Change the location with
 - [ ] **Fullscreen kiosk** on and a **Settings PIN** set
 - [ ] At the end: **Settings → Open photos** and copy the event folder somewhere safe
 
+### Photos to phones
+
+With **Guests get their photo on their phone** on, the booth runs a small web server on your computer while the app is open. A guest taps **Share**, scans the QR code, and their phone opens the photo straight from the booth. Nothing goes online.
+
+- **Same network.** The phone must be on the same Wi-Fi as the computer. A venue's guest Wi-Fi often keeps devices from seeing each other; your own travel router, or the computer's hotspot, always works. Neither needs internet.
+- **The first time**, macOS or Windows may ask whether the app may accept incoming connections: allow it.
+- **What can be reached:** only photos and clips of sessions from this run of the app, each behind a link with a random 12-character key. No other file on the computer. The links stop working when the app closes, and the pages are plain HTTP, readable by whoever runs the network.
+- The settings say which address phones reach the booth at, or that the computer isn't on a network.
+
 ## Privacy
 
-Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. It makes no network connections, with one exception: if you turn on face swap, it downloads the face swap models once from this project's GitHub page. Nothing is ever uploaded. Every effect, including background removal and face swap, runs on the booth itself, so no photo ever leaves it. Photos, settings and layouts are stored only on your computer, in the folders listed above. Delete them whenever you like.
+Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. It makes two kinds of network connection, both to this project's GitHub page: it asks for new versions every few hours (turn off **Get new versions automatically** to stop that), and if you turn on face swap, it downloads the face swap models once. Sharing to phones, if you turn it on, answers phones on your own network and reaches nothing outside it. Nothing is ever uploaded. Every effect, including background removal and face swap, runs on the booth itself, so no photo ever leaves it. Photos, settings and layouts are stored only on your computer, in the folders listed above. Delete them whenever you like.
 
 ## Troubleshooting
 
@@ -376,18 +389,15 @@ Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. I
 
 **Does it run on Linux or a Raspberry Pi?** It's built with Electron, so it may run from source on Linux, but only Windows and macOS are tested and released.
 
-**Can guests get their photos on their phone?** Not yet. QR-code sharing over the local network is on the roadmap.
+**Can guests get their photos on their phone?** Yes, by QR code, when their phone is on the same Wi-Fi as the booth: see [Photos to phones](#photos-to-phones). Nothing goes online.
 
 ## Roadmap
 
 Ideas for future versions (contributions welcome):
 
-- QR-code sharing to guests' phones over local Wi-Fi (still no cloud)
 - Direct camera control for Canon, Nikon DSLRs and older Sony bodies (Sony and Nikon Z are in, in beta)
-- Start screen backgrounds and attract-mode slideshow
-- `.cube` colour presets (LUT filters)
-- On-screen drawing and signatures
-- Automatic updates
+- A slideshow of the event's own photos on the start screen
+- `.cube` looks on boomerangs and videos
 
 ## Development
 
@@ -426,9 +436,11 @@ The app is deliberately small and dependency-free at runtime:
 | `app.js` | Booth flow: countdown, photo sessions, compositing, printing, settings |
 | `events.js`, `events-ui.js` | Events: each one's settings, folder and session log (main process), and the picker in the settings |
 | `setup.js` | The setup guide |
-| `review.js` | The editing screen: looks, retake, backgrounds, face swap, stickers and props |
+| `review.js` | The editing screen: looks, retake, backgrounds, face swap, stickers and props, drawing, the share sheet |
+| `local-share.js` | Main process: the web server that hands photos to phones on the local network |
+| `update.js`, `update-ui.js` | Automatic updates: the check and download (main process), and their line in the settings |
 | `capture.js` | Boomerangs and video messages |
-| `enhance.js`, `fx.js` | Auto-enhance; WebGL effects: glam, backgrounds, green screen, comic and sketch |
+| `enhance.js`, `fx.js` | Auto-enhance and `.cube` colour tables; WebGL effects: glam, backgrounds, green screen, comic and sketch |
 | `ai.js` | On-device face and person detection with MediaPipe (bundled, offline) |
 | `swap.js` | Face swap with browser-inswapper |
 | `camera.js` | The camera in the page: a webcam, or a controlled camera's live view and photos |
@@ -454,8 +466,10 @@ GitHub Actions then drafts the release with the changelog entry as its notes. Th
 ```bash
 npm run dist -- --publish never                    # on a Mac: both macOS installers, with camera control
 npx electron-builder --win --x64 --publish never   # Windows, from a Mac: no camera control
-gh release upload v0.2.0 dist/*.dmg dist/*.exe && gh release edit v0.2.0 --draft=false
+gh release upload v0.2.0 dist/*.dmg dist/*.zip dist/*.exe dist/*.blockmap dist/latest*.yml && gh release edit v0.2.0 --draft=false
 ```
+
+The `.zip`, `.blockmap` and `latest*.yml` files are what installed booths update themselves from (`build.publish` in `package.json` names this repository): leave one out and booths on that system stay on the old version. A fork that publishes its own builds should point `build.publish` at its own releases, or remove it to build without updates.
 
 On Windows, `npm run dist -- --publish never` builds the installer with camera control.
 

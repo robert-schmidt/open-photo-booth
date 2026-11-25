@@ -1,6 +1,6 @@
-/* global booth, $, settings, current, template, compose, save, printCurrent, show, screen, shoot, toast, canvas, loadImage, FILTERS, Enhance, FX, AI, Layout, Swap */
+/* global booth, $, settings, current, template, compose, save, printCurrent, show, screen, shoot, toast, canvas, loadImage, FILTERS, Enhance, FX, AI, Layout, qrcode, Swap */
 // The review screen. Guests pick a look and auto-enhance for all photos or just one, retake a single photo,
-// add stickers, and finish with Print or Done. Done also happens by itself after the event's idle time, shown as a shrinking bar.
+// add stickers, draw or sign, and finish with Print or Done. Done also happens by itself after the event's idle time, shown as a shrinking bar.
 const Review = (() => {
   const EMOJI = ['🎉', '🥳', '😎', '❤️', '😂', '👑', '💋', '⭐', '🔥', '🦄', '🎈', '💍', '🍾', '🌈', '👍', '🐶']
   // Props that fit every face: [emoji, name, anchor, size in outer-eye-corner distances].
@@ -9,6 +9,10 @@ const Review = (() => {
   // edit names the one it shows in .ai (null for the photo itself).
   const aiCache = new WeakMap()
   let aiJob = 0
+  // Drawing: pen colours, and widths as a share of the layout's shorter side.
+  const PENS = [['#ffffff', 'White'], ['#111111', 'Black'], ['#ff4f6d', 'Red'], ['#ffd23f', 'Yellow'], ['#3d8bfd', 'Blue'], ['#2fb457', 'Green']]
+  const pen = { color: PENS[0][0], width: 0.012 }
+  let strokes = [], stroke = null // { color, width, pts } in layout pixels; stroke: the one a finger is drawing (.id: its pointer)
   const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
   const view = $('#result'), vctx = view.getContext('2d')
   let edits = [], selected = null, dirty = false, timer, base, stickers = [], sel = null, extra = { key: null, stickers: [], backgrounds: [], scenes: [] }, tab, renders = 0, panels = 0
@@ -87,11 +91,26 @@ const Review = (() => {
     if (n === renders) $('#review').classList.remove('busy')
   }
 
-  // current.sheet is what gets saved and printed: the layout plus its stickers.
+  // Guests' drawings and signatures, over the stickers.
+  function drawStrokes(ctx) {
+    ctx.save()
+    Object.assign(ctx, { lineCap: 'round', lineJoin: 'round' })
+    for (const s of strokes) {
+      Object.assign(ctx, { strokeStyle: s.color, lineWidth: s.width })
+      ctx.beginPath()
+      ctx.moveTo(s.pts[0].x, s.pts[0].y)
+      for (const p of s.pts) ctx.lineTo(p.x + 0.01, p.y) // a tap is a dot
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+
+  // current.sheet is what gets saved and printed: the layout plus its stickers and drawings.
   function flatten() {
     const c = canvas(base.width, base.height), ctx = c.getContext('2d')
     ctx.drawImage(base, 0, 0)
     for (const st of stickers) drawSticker(ctx, st)
+    drawStrokes(ctx)
     current.sheet = c
     paint()
   }
@@ -101,6 +120,7 @@ const Review = (() => {
     if (view.width !== base.width || view.height !== base.height) Object.assign(view, { width: base.width, height: base.height })
     vctx.drawImage(base, 0, 0)
     for (const st of stickers) drawSticker(vctx, st)
+    drawStrokes(vctx)
     if (sel) drawFrame(vctx, sel)
     if (selected !== null && current.shots.length > 1) {
       const s = scale()
@@ -222,7 +242,7 @@ const Review = (() => {
 
   // Switches tabs right away; the tool's previews follow when ready.
   function showTab() {
-    const tools = [settings.guestLooks && 'looksTool', settings.guestSwap && settings.swapReady && extra.scenes.length && 'swapTool', settings.guestBackgrounds && 'bgTool', settings.guestStickers && 'stickersTool'].filter(Boolean)
+    const tools = [settings.guestLooks && 'looksTool', settings.guestSwap && settings.swapReady && extra.scenes.length && 'swapTool', settings.guestBackgrounds && 'bgTool', settings.guestStickers && 'stickersTool', settings.guestDraw && 'drawTool'].filter(Boolean)
     if (!tools.includes(tab)) tab = tools[0]
     $('#toolTabs').hidden = tools.length < 2
     for (const b of $('#toolTabs').children) {
@@ -231,11 +251,12 @@ const Review = (() => {
       b.onclick = () => {
         tab = b.dataset.tab
         if (tab === 'swapTool' && selected === null) selected = 0 // face swap works on one photo at a time
+        if (tab === 'drawTool') sel = null // a finger on the photos draws now
         panel()
         paint()
       }
     }
-    for (const id of ['looksTool', 'swapTool', 'bgTool', 'stickersTool']) $('#' + id).hidden = id !== tab
+    for (const id of ['looksTool', 'swapTool', 'bgTool', 'stickersTool', 'drawTool']) $('#' + id).hidden = id !== tab
   }
 
   async function panel() {
@@ -304,6 +325,18 @@ const Review = (() => {
       return b
     }))
 
+    $('#penColors').replaceChildren(...PENS.map(([color, name]) => {
+      const b = el('button', 'sticker pen' + (pen.color === color ? ' on' : ''))
+      b.style.background = color
+      b.ariaLabel = `${name} pen`
+      b.ariaPressed = String(pen.color === color)
+      b.onclick = () => { pen.color = color; panel() }
+      return b
+    }))
+    for (const b of $('#penSize').querySelectorAll('button')) {
+      b.ariaPressed = String(pen.width === +b.dataset.pen)
+      b.onclick = () => { pen.width = +b.dataset.pen; panel() }
+    }
     for (const b of $('#glamSeg').querySelectorAll('button')) {
       b.ariaPressed = String(all(e => e.glam === b.dataset.glam))
       b.onclick = () => change(e => { e.glam = b.dataset.glam })
@@ -351,6 +384,21 @@ const Review = (() => {
     swapInto(+k, (+turn + 1) % aiCache.get(current.shots[i]).get(edits[i].ai).people)
   }
 
+  // Share: a QR code to this session's photo. In this app it leads to this computer (local-share.js), so phones on
+  // the booth's network get the photo without anything going online. The photo is handed over when the guest
+  // finishes (see finish()); its page waits for it if the guest scans before that.
+  function share(open) {
+    $('#shareSheet').hidden = !open
+    if (!open) return
+    const q = qrcode(0, 'M')
+    q.addData(current.share + current.key)
+    q.make()
+    $('#qr').innerHTML = q.createSvgTag({ cellSize: 8, margin: 0, scalable: true })
+  }
+  const newKey = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('')
+  $('#shareBtn').onclick = () => share(true)
+  $('#shareClose').onclick = () => share(false)
+
   function busy(text) {
     $('#aiBusy').hidden = !text
     $('#aiBusyText').textContent = text || ''
@@ -394,6 +442,7 @@ const Review = (() => {
   async function retake(i) {
     aiJob++ // a result still on its way is kept, but no longer shown
     busy(null)
+    share(false)
     clearTimeout(timer)
     show('capture')
     $('#status').textContent = current.shots.length > 1 ? `Photo ${i + 1}, take two` : ''
@@ -413,6 +462,10 @@ const Review = (() => {
 
   async function open() {
     const look = FILTERS[settings.filter] ? settings.filter : 'none'
+    share(false)
+    current.key = newKey()
+    current.share = await booth.shareBase().catch(() => '') // asked per session: the booth may have joined a network since
+    $('#shareBtn').hidden = !current.share
     await loadExtra()
     current.focus = await Promise.all(current.shots.map(faceFocus))
     edits = current.shots.map(() => ({ look, enhance: settings.enhance, glam: settings.glam, bg: settings.background, ai: null }))
@@ -420,6 +473,8 @@ const Review = (() => {
     busy(null)
     tab = null
     stickers = []
+    strokes = []
+    stroke = null
     sel = null
     selected = null
     dirty = false
@@ -438,6 +493,9 @@ const Review = (() => {
       const sheet = current.sheet
       chain(async r => ({ ...r, file: await save(sheet, `${r.stamp}.jpg`) }))
     }
+    const { key, share: sharing } = current // read now: the next guest may have started by the time the saves are done
+    if (sharing) chain(async r => { await booth.sharePhoto({ key, file: r.file }); return r })
+    share(false)
     if (print) printCurrent()
     Swap.reset()
     show('attract')
@@ -458,6 +516,10 @@ const Review = (() => {
     view.setPointerCapture(e.pointerId)
     const p = toSheet(e)
     pts.set(e.pointerId, p)
+    if (tab === 'drawTool') { // one finger draws; others are ignored until it lifts
+      if (!stroke) strokes.push((stroke = { id: e.pointerId, color: pen.color, width: pen.width * Math.min(base.width, base.height), pts: [p] }))
+      return repaint()
+    }
     if (pts.size === 1) {
       if (sel && dist(p, corner(sel)) <= 36 / scale()) {
         stickers.splice(stickers.indexOf(sel), 1)
@@ -478,6 +540,7 @@ const Review = (() => {
   view.addEventListener('pointermove', e => {
     if (!pts.has(e.pointerId)) return
     pts.set(e.pointerId, toSheet(e))
+    if (stroke?.id === e.pointerId) { stroke.pts.push(pts.get(e.pointerId)); return repaint() }
     if (!g) return
     const p = [...pts.values()]
     if (p.length === 1) {
@@ -495,6 +558,7 @@ const Review = (() => {
   })
   const end = e => {
     if (!pts.delete(e.pointerId)) return
+    if (stroke?.id === e.pointerId) { stroke = null; dirty = true; return flatten() }
     if (moved) { dirty = true; flatten() }
     moved = false
     begin()
@@ -511,13 +575,15 @@ const Review = (() => {
     wheelEnd = setTimeout(() => { dirty = true; flatten() }, 200)
   }, { passive: false })
 
+  $('#drawUndo').onclick = () => { strokes.pop(); dirty = true; flatten() }
+  $('#drawClear').onclick = () => { strokes = []; dirty = true; flatten() }
   $('#aiSkip').onclick = () => { aiJob++; busy(null) }
   $('#print').onclick = () => finish(true)
   $('#done').onclick = () => finish()
   $('#allPhotos').onclick = () => select(null)
-  // Any touch or key while reviewing restarts the countdown.
+  // Any touch or key while reviewing restarts the countdown (the share sheet sits outside #review, so listen on the page).
   document.addEventListener('pointerdown', () => { if (screen() === 'review') poke() })
   document.addEventListener('keydown', () => { if (screen() === 'review') poke() })
 
-  return { open, finish, backdrop }
+  return { open, finish, share, newKey, backdrop }
 })()

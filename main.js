@@ -5,6 +5,8 @@ const path = require('node:path')
 const { pathToFileURL } = require('node:url')
 const Events = require('./events.js')
 const Cameras = require('./cameras.js')
+const LocalShare = require('./local-share.js')
+const Update = require('./update.js')
 const crypto = require('node:crypto')
 
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' }
@@ -15,10 +17,10 @@ const exists = p => fs.stat(p).then(() => true, () => false)
 const dataUrl = async file => `data:${MIME[path.extname(file).toLowerCase()] || 'image/png'};base64,${(await fs.readFile(file)).toString('base64')}`
 const defaults = () => ({
   eventName: 'My Event', startText: 'Touch to start', cameraId: '', micId: '', mirror: true, templateId: 'builtin:classic-strip', filter: 'none',
-  countdown: 3, betweenShots: 2, reviewSeconds: 45, enhance: true, guestRetake: true, guestLooks: true, guestStickers: true, stickerDir: '', glam: 'light', noBlink: true, guestBackgrounds: true, backgroundDir: '', background: 'none',
+  countdown: 3, betweenShots: 2, reviewSeconds: 45, enhance: true, guestRetake: true, guestLooks: true, guestStickers: true, stickerDir: '', glam: 'light', noBlink: true, guestBackgrounds: true, backgroundDir: '', background: 'none', lutDir: '', attractDir: '', guestDraw: false, localShare: false,
   modePhoto: true, modeBoomerang: false, modeVideo: false, videoSeconds: 10, greenScreen: false, chromaTolerance: 50, guestSwap: false, swapDir: '', swapLive: false,
   outputDir: path.join(app.getPath('pictures'), 'Open Photo Booth'),
-  printer: '', copies: 1, autoPrint: false, print2up: true, kiosk: false, pin: '',
+  printer: '', copies: 1, autoPrint: false, print2up: true, kiosk: false, pin: '', autoUpdate: true,
 })
 const picked = new Set() // image files the user chose in a dialog; only these may be copied into templates
 const gotLock = app.requestSingleInstanceLock()
@@ -115,21 +117,48 @@ ipcMain.handle('settings:set', async (_e, { swapReady: _ready, ...s }) => {
   await fs.rename(settingsFile() + '.tmp', settingsFile())
   await Events.update(next)
   win.setKiosk(!!next.kiosk)
+  await localBase() // sharing starts or stops with the event's setting
   return readSettings()
 })
 ipcMain.handle('events:list', async () => Events.list((await readSettings()).outputDir))
 ipcMain.handle('events:new', async () => { await Events.create(await readSettings()); return readSettings() })
 ipcMain.handle('events:switch', async (_e, id) => { await Events.activate(id); return readSettings() })
 ipcMain.handle('events:remove', async (_e, id) => { await Events.remove(id); return readSettings() })
+// Photos to phones on the same network (local-share.js), when the event has it on. localBase: where a photo's page
+// is (its key goes on the end), or '' when sharing is off or the computer isn't on a network. Only files from the
+// photos folder are handed over, so the renderer can't put anything else on the network.
+const localBase = async () => {
+  if ((await readSettings()).localShare) return LocalShare.base()
+  LocalShare.stop()
+  return ''
+}
+ipcMain.handle('share:local', localBase)
+ipcMain.handle('share:base', localBase)
+ipcMain.handle('share:photo', async (_e, { key, file }) => {
+  const s = await readSettings()
+  if (!s.localShare || !/^[a-z0-9]{12}$/.test(key) || !/\.(jpg|mp4|webm)$/.test(file) || !path.resolve(file).startsWith(path.resolve(s.outputDir) + path.sep)) return false
+  LocalShare.add(key, file, s.eventName)
+  return true
+})
 // On-device AI models bundled in models/ (see ai.js). Read here because the sandboxed renderer can't fetch file:// URLs.
 const MODELS = ['face_landmarker.task', 'selfie_segmenter.tflite']
 ipcMain.handle('model:load', (_e, name) => (MODELS.includes(name) ? fs.readFile(path.join(__dirname, 'models', name)) : null))
-// Images from the active event's sticker or background folder, read here so the renderer can't pick the path.
+// Images from one of the active event's folders (stickers, backgrounds, scenes, start screen pictures), read here so
+// the renderer can't pick the path.
 ipcMain.handle('images:list', async (_e, kind) => {
-  const dir = ['stickerDir', 'backgroundDir', 'swapDir'].includes(kind) && (await readSettings())[kind]
+  const dir = ['stickerDir', 'backgroundDir', 'swapDir', 'attractDir'].includes(kind) && (await readSettings())[kind]
   if (!dir) return []
   const files = (await fs.readdir(dir, { withFileTypes: true }).catch(() => [])).filter(f => f.isFile() && /\.(png|webp|gif|jpe?g)$/i.test(f.name))
   return Promise.all(files.map(f => f.name).sort().slice(0, 60).map(f => dataUrl(path.join(dir, f))))
+})
+// The active event's .cube colour presets (extra looks, see fx.js), as text. A 65-point table is about 8 MB of it.
+ipcMain.handle('luts:list', async () => {
+  const dir = (await readSettings()).lutDir, out = []
+  for (const f of dir ? (await fs.readdir(dir).catch(() => [])).filter(f => /\.cube$/i.test(f)).sort().slice(0, 24) : []) {
+    const file = path.join(dir, f), size = await fs.stat(file).then(s => s.size, () => Infinity)
+    if (size < 32e6) out.push({ name: path.basename(f, path.extname(f)), text: await fs.readFile(file, 'utf8') })
+  }
+  return out
 })
 // Cameras the booth controls (cameras.js). Frames and comings and goings go to the page that opened the camera.
 ipcMain.handle('camera:list', () => Cameras.list())
@@ -220,7 +249,6 @@ ipcMain.handle('shell:open', async () => {
   return shell.openPath(dir)
 })
 ipcMain.handle('app:quit', () => app.quit())
-ipcMain.handle('app:version', () => app.getVersion())
 // The project's page, in the computer's browser. The address is fixed here: the page can't open any other.
 ipcMain.handle('app:repo', () => shell.openExternal('https://github.com/robert-schmidt/open-photo-booth'))
 
@@ -249,12 +277,14 @@ app.whenReady().then(async () => {
     width: 1280, height: 800, minWidth: 900, minHeight: 600, backgroundColor: '#000', autoHideMenuBar: true,
     kiosk: (await readSettings()).kiosk,
     show: !process.env.BOOTH_BACKGROUND, // the tests' window opens behind whatever you're working in (see below)
-    // spellcheck off: on Windows it would download dictionaries, and the booth makes no network requests
+    // spellcheck off: on Windows it would download dictionaries, and the booth makes no network requests of its own
+    // beyond the ones the settings name (new versions, the face swap models)
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, spellcheck: false },
   })
   win.webContents.on('will-navigate', e => e.preventDefault())
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.loadURL('app://booth/index.html')
+  Update.start(win, (await readSettings()).autoUpdate)
   if (process.env.BOOTH_BACKGROUND) win.showInactive() // shown, but your typing doesn't land in it
 })
 app.on('window-all-closed', () => app.quit())

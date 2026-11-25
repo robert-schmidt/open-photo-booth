@@ -2,6 +2,7 @@
 // and the layout editor. Runs in a throwaway profile, so your own settings, layouts and photos are never touched.
 // Usage: npm run e2e [-- <dir>]   saves screenshots to <dir>; `npm run e2e -- docs` refreshes the README images.
 import { spawn } from 'node:child_process'
+import http from 'node:http'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -24,6 +25,17 @@ const log = async dir => (await fs.readFile(path.join(dir, 'sessions.jsonl'), 'u
 // BOOTH_FACE_MODELS (a folder with the InsightFace models) stands in for the address the booth downloads them from.
 // Without it the face swap checks are skipped, and the address leads nowhere: the tests never use the network.
 process.env.BOOTH_MODELS = pathToFileURL(process.env.BOOTH_FACE_MODELS || path.join(tmp, 'no-models')).href
+// A stand-in update server. It offers version 99.0.0, whose download fails its checksum on purpose, so nothing installs.
+const updateHits = [], badSha = `${'A'.repeat(86)}==`
+const updates = http.createServer((req, res) => {
+  const file = new URL(req.url, 'http://x').pathname // the updater adds ?noCache=…
+  updateHits.push(file)
+  if (file.endsWith('.yml')) return res.end(`version: 99.0.0\nfiles:\n${['mac-arm64.zip', 'mac-x64.zip', 'win-x64.exe'].map(f => `  - url: Booth-99.0.0-${f}\n    sha512: ${badSha}\n    size: 4096\n`).join('')}path: Booth-99.0.0-win-x64.exe\nsha512: ${badSha}\nreleaseDate: '2026-10-20T00:00:00.000Z'\n`)
+  if (file.endsWith('.blockmap')) res.writeHead(404)
+  res.end(file.endsWith('.blockmap') ? '' : Buffer.alloc(4096, 1))
+})
+await new Promise(r => updates.listen(0, '127.0.0.1', r))
+process.env.BOOTH_UPDATES = `http://127.0.0.1:${updates.address().port}/`
 // A camera the booth controls, simulated: it shows this photo, and takes it again at 20 megapixels.
 process.env.BOOTH_SIM_CAMERA = path.join(import.meta.dirname, 'test', 'portrait.jpg')
 process.env.BOOTH_BACKGROUND = '1' // the window doesn't take the keyboard from whoever is at this computer
@@ -94,7 +106,7 @@ try {
   assert.equal(await evaluate(`document.querySelectorAll('#setupLayouts .look.on').length`), 1, 'the current layout is picked')
   await evaluate(`document.querySelector('#setupNext').click()`)
   const tool = label => `[...document.querySelectorAll('.setup-tool')].find(r => r.textContent.includes('${label}'))`
-  assert.ok(await evaluate(`document.querySelectorAll('.setup-tool input').length === 8 && !document.querySelector('.setup-tool input:disabled')`), 'every tool is on offer')
+  assert.ok(await evaluate(`document.querySelectorAll('.setup-tool input').length === 10 && !document.querySelector('.setup-tool input:disabled')`), 'every tool is on offer')
   await evaluate(`${tool('Boomerangs')}.querySelector('input').click()`)
   await clean(); await shot('setup-guests.jpg')
   await evaluate(`document.querySelector('#setupNext').click()`)
@@ -288,6 +300,74 @@ try {
   await evaluate(`booth.saveSettings({ ...settings, reviewSeconds: 45, autoPrint: false }).then(s => { settings = s })`)
   console.log('review ok')
 
+  // 1d. The event's own looks, start screen pictures, drawing, and photos to phones over the local network.
+  // A .cube preset in the event's looks folder is a look (this one hands each colour channel on to the next). The start screen shows the
+  // event's pictures until a guest starts.
+  const extras = path.join(tmp, 'extras')
+  await fs.mkdir(path.join(extras, 'slides'), { recursive: true })
+  await fs.writeFile(path.join(extras, 'Rotated.cube'), 'LUT_3D_SIZE 3\n' + Array.from({ length: 27 }, (_, i) => [Math.floor(i / 3) % 3, Math.floor(i / 9), i % 3].map(v => v / 2).join(' ')).join('\n'))
+  await fs.writeFile(path.join(extras, 'Broken.cube'), 'LUT_3D_SIZE 3\n0 0 0\n')
+  for (const n of ['a.jpg', 'b.jpg']) await fs.copyFile(path.join(import.meta.dirname, 'test/portrait.jpg'), path.join(extras, 'slides', n))
+  await evaluate(`booth.saveSettings({ ...settings, lutDir: ${JSON.stringify(extras)}, attractDir: ${JSON.stringify(path.join(extras, 'slides'))}, guestDraw: true, localShare: true }).then(s => { settings = s; return applySettings() })`)
+  await until(`!document.querySelector('#slides').hidden && getComputedStyle(document.querySelector('#slides i.on')).backgroundImage.startsWith('url("data:image/jpeg')`)
+  assert.deepEqual(await evaluate(`Object.keys(FILTERS).filter(k => k.startsWith('lut:'))`), ['lut:Rotated'], 'the preset is a look; the file that is no table is left out')
+  await clean(); await shot('start-pictures.jpg')
+  await evaluate('document.querySelector("#attract").click()')
+  await until('screen() === "review"')
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('#slides')).display`), 'none', 'the pictures step aside for the session')
+  const rgb = await evaluate(slot('[r, g, b]'))
+  assert.ok(Math.max(...rgb) - Math.min(...rgb) > 10, `the test photo has a colour to move: ${rgb}`)
+  await pickOption('#looks', 'Rotated')
+  await until(slot(`Math.abs(r - ${rgb[1]}) <= 4 && Math.abs(g - ${rgb[2]}) <= 4 && Math.abs(b - ${rgb[0]}) <= 4`), 5000)
+  // Drawing: a finger across the middle of the layout leaves a line in the pen's colour; Undo takes it away.
+  await evaluate(`document.querySelector('[data-tab="drawTool"]').click()`)
+  await until(`!!document.querySelector('#penColors [aria-label="Blue pen"]')`)
+  await evaluate(`document.querySelector('#penColors [aria-label="Blue pen"]').click(); document.querySelector('#penSize [data-pen="0.028"]').click()`)
+  const inked = `(([r, g, b]) => b > 200 && r < 100)(current.sheet.getContext('2d').getImageData(current.sheet.width / 2, current.sheet.height / 2, 1, 1).data)`
+  const stroke = async () => {
+    await touch('touchStart', mid.x - 60, mid.y)
+    await touch('touchMove', mid.x, mid.y)
+    await touch('touchMove', mid.x + 60, mid.y)
+    await touch('touchEnd')
+    await until(inked, 3000)
+  }
+  await stroke()
+  await evaluate(`document.querySelector('#drawUndo').click()`)
+  assert.ok(!(await evaluate(inked)), 'Undo takes the line away')
+  await stroke()
+  await clean(); await shot('draw.jpg')
+  // Sharing: the QR code leads to this computer. Before Done its page says the photo is on its way; after, it shows
+  // the finished layout, drawing and all. Nothing else is served, and nothing at all once sharing is off.
+  let local // the booth's sharing server, reached without leaving this computer
+  const shareKey = await evaluate('current.key')
+  if (Object.values(os.networkInterfaces()).flat().some(a => a.family === 'IPv4' && !a.internal)) {
+    const base = await evaluate('current.share')
+    assert.match(base, /^http:\/\/[\d.]+:\d+\/p\/$/)
+    local = `http://127.0.0.1:${new URL(base).port}`
+    await evaluate(`document.querySelector('#shareBtn').click()`)
+    assert.ok(await evaluate(`!document.querySelector('#shareSheet').hidden && !!document.querySelector('#qr svg')`), 'the share sheet shows a QR code')
+    await clean(); await shot('share.jpg')
+    assert.match(await fetch(`${local}/p/${shareKey}`).then(r => r.text()), /on its way/)
+    assert.equal((await fetch(`${local}/f/${shareKey}`)).status, 404, 'no photo before Done')
+    await evaluate('Review.finish()')
+    const { file: shared } = await evaluate('current.saved')
+    assert.ok(await evaluate(`document.querySelector('#shareSheet').hidden`), 'the sheet closes with the session')
+    const html = await fetch(`${local}/p/${shareKey}`).then(r => r.text())
+    assert.ok(html.includes(`<img src="/f/${shareKey}"`) && html.includes('Anna &#38; Ben'), html)
+    assert.ok(Buffer.from(await fetch(`${local}/f/${shareKey}`).then(r => r.arrayBuffer())).equals(await fs.readFile(shared)), 'the phone gets the saved layout')
+    const part = await fetch(`${local}/f/${shareKey}`, { headers: { range: 'bytes=2-11' } })
+    assert.deepEqual([part.status, part.headers.get('content-range'), (await part.arrayBuffer()).byteLength], [206, `bytes 2-11/${(await fs.stat(shared)).size}`, 10])
+    for (const bad of ['/', '/f/aaaaaaaaaaaa', '/f/../main.js', `/p/${shareKey}/x`, '/package.json']) assert.equal((await fetch(local + bad)).status, 404, bad)
+    assert.equal((await fetch(`${local}/f/${shareKey}`, { method: 'POST' })).status, 404)
+    assert.ok(!(await evaluate(`booth.sharePhoto({ key: ${JSON.stringify(shareKey)}, file: ${JSON.stringify(path.join(profile, 'settings.json'))} })`)), 'only files from the photos folder')
+  } else {
+    console.log('(no network on this computer: the sharing server is not checked)')
+    await evaluate('Review.finish()')
+  }
+  await evaluate(`booth.saveSettings({ ...settings, lutDir: '', attractDir: '', guestDraw: false }).then(s => { settings = s; return applySettings() })`)
+  await until(`document.querySelector('#slides').hidden && !FILTERS['lut:Rotated']`)
+  console.log('looks, pictures, drawing and sharing ok')
+
   // 1e. Capture modes: with boomerangs and videos on, the start screen offers three buttons. A boomerang saves its
   // flip-book layout at once and its MP4 when the guest finishes; a video message records sound and saves at once.
   await evaluate(`booth.saveSettings({ ...settings, modeBoomerang: true, modeVideo: true, videoSeconds: 3, background: 'night' }).then(s => { settings = s; return applySettings() })`)
@@ -307,6 +387,12 @@ try {
   const boom = await evaluate('current.clip')
   assert.match(boom, /\.mp4$/)
   assert.ok((await fs.stat(boom)).size > 20000, 'boomerang MP4 saved')
+  if (local) { // a boomerang is shared as its video, once it's made
+    const clipPage = `${local}/p/${await evaluate('current.key')}`
+    for (let i = 0; i < 50 && !(await fetch(clipPage).then(r => r.text())).includes('<video'); i++) await sleep(100)
+    assert.match(await fetch(clipPage).then(r => r.text()), /<video src="\/f\/[a-z0-9]{12}" controls/)
+    assert.equal((await fetch(clipPage.replace('/p/', '/f/'))).headers.get('content-type'), 'video/mp4')
+  }
   // A double tap starts one video message, not two (the microphone opens once).
   await evaluate(`(() => {
     const open = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
@@ -346,6 +432,10 @@ try {
   assert.ok(restyled.seconds > 2 && restyled.seconds < 4.5, `restyled video is as long: ${restyled.seconds}`)
   await evaluate(`booth.saveSettings({ ...settings, modeBoomerang: false, modeVideo: false, background: 'none' }).then(s => { settings = s; return applySettings() })`)
   assert.ok(!(await evaluate(`document.querySelector('#startText').hidden`)))
+  // With sharing off again the server is gone, and so are the links.
+  await evaluate(`booth.saveSettings({ ...settings, localShare: false }).then(s => { settings = s })`)
+  assert.equal(await evaluate('booth.shareBase()'), '')
+  if (local) assert.ok(await fetch(`${local}/p/${shareKey}`).then(() => false, () => true), 'nothing listens once sharing is off')
   console.log('capture modes ok')
 
   // 1d. On-device AI on a real portrait (the public-domain White House portrait MediaPipe uses in its own tests):
@@ -557,6 +647,24 @@ try {
   })()`)
   await fs.writeFile(path.join(shots, 'layouts.jpg'), Buffer.from(sheet.split(',')[1], 'base64'))
 
+  // Updates: the settings show the version. A new version on the server is found and downloaded, and its checksum is
+  // checked (this one fails, so nothing installs). A ready update installs only once the start screen has been quiet.
+  if (!built) { // a built app asks where its releases are published, not the stand-in
+    const { version, productName } = JSON.parse(await fs.readFile(path.join(import.meta.dirname, 'package.json'), 'utf8'))
+    assert.equal(await evaluate(`document.querySelector('#version').textContent`), `${productName} ${version}`)
+    await until(`booth.update.status().then(s => s.state === 'failed' && s.version === '99.0.0')`, 30000)
+    assert.ok(updateHits.some(u => /Booth-99\.0\.0-(mac-(arm64|x64)\.zip|win-x64\.exe)$/.test(u)), `the update was downloaded: ${updateHits}`)
+    assert.match(await evaluate(`document.querySelector('#updateStatus').textContent`), /tries again/)
+    await evaluate(`document.querySelector('dialog[open]')?.close(); show('attract'); Update.set({ state: 'ready', version: '99.0.1' })`)
+    assert.ok(!(await evaluate('Update.tick(Date.now())')), 'not right after a touch')
+    assert.ok(await evaluate('Update.tick(Date.now() + 16 * 60000)'), 'after 15 quiet minutes on the start screen')
+    await evaluate(`show('review')`)
+    assert.ok(!(await evaluate('Update.tick(Date.now() + 16 * 60000)')), 'never mid-session')
+    await evaluate(`show('attract'); Update.set({ state: 'latest' })`)
+    assert.ok(await evaluate('settings.autoUpdate === true'), 'updates are on unless the operator turns them off')
+    console.log('updates ok')
+  }
+
   assert.deepEqual(consoleErrors, [], 'no uncaught page errors')
   console.log('all ok')
 } catch (e) {
@@ -565,6 +673,8 @@ try {
 } finally {
   finished = true
   ws.close()
+  updates.close()
+  updates.closeAllConnections()
   if (proc.exitCode === null) { proc.kill(); await new Promise(r => proc.once('exit', r)) }
   await fs.rm(tmp, { recursive: true, force: true })
 }

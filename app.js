@@ -1,4 +1,4 @@
-/* global booth, Layout, Events, Review, AI, Capture, Setup, Camera, CAMERAS, Enhance */
+/* global booth, Layout, Events, Review, AI, Capture, Setup, Camera, CAMERAS, Enhance, FX */
 const $ = s => document.querySelector(s)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const FILTERS = {
@@ -11,7 +11,7 @@ const FILTERS = {
 }
 const video = $('#video'), form = $('#settingsForm')
 for (const c of CAMERAS) $('#supportedCameras').append(Object.assign(document.createElement('p'), { textContent: `${c.maker}: ${[c.models.join(', '), c.note].filter(Boolean).join('. ')}` }))
-let settings, templates = [], template, assets = {}, stream, current
+let settings, templates = [], template, assets = {}, stream, current, lutDir, slideTimer
 const CAMERA_TERMS = `Before the booth controls your camera:
 
 • A camera's maker may stop covering it under warranty once it has been controlled by software like this. Sony says so for its cameras.
@@ -59,9 +59,28 @@ async function applySettings() {
   $('#eventTitle').textContent = settings.eventName
   $('#startText').textContent = settings.startText
   await loadTemplates()
+  if (lutDir !== settings.lutDir) FX.luts(await booth.listLuts()) // read again when the event's looks folder changes
+  lutDir = settings.lutDir
   await startCamera()
   Capture.attract()
+  startSlides()
   Swap.ensure()
+}
+
+// Start screen pictures: the event's folder of images shows in place of the camera view, one as a background, several
+// as a slideshow. Not with live face swap characters: there guests need to see themselves.
+async function startSlides() {
+  clearInterval(slideTimer)
+  const urls = settings.guestSwap && settings.swapLive ? [] : await booth.listImages('attractDir'), layers = $('#slides').children
+  let n = 0
+  const next = () => {
+    layers[n % 2].style.backgroundImage = `url("${urls[n % urls.length]}")`
+    layers[n % 2].classList.add('on')
+    layers[++n % 2].classList.remove('on')
+  }
+  $('#slides').hidden = !urls.length
+  if (urls.length) next()
+  if (urls.length > 1) slideTimer = setInterval(next, 7000)
 }
 
 function grab() {
@@ -356,10 +375,19 @@ async function openSettings() {
   fill(form.printer, [['', 'Ask each time (print dialog)'], ...(await booth.listPrinters()).map(p => [p.name, p.displayName || p.name])])
   for (const el of form.elements) if (el.name in settings) el[el.type === 'checkbox' ? 'checked' : 'value'] = settings[el.name]
   updatePreview()
+  shareStatus()
   Swap.status()
   showSection()
   if (!$('#settings').open) $('#settings').showModal() // also called to refill the open dialog after switching events
 }
+
+// Sharing over the local network: what guests' phones need, and whether this computer is reachable right now.
+const SHARE_HELP = "Guests scan a QR code on the booth and get their photo from this computer: nothing goes online. Their phones must be on the same Wi-Fi as it (a venue's guest Wi-Fi often keeps devices apart: your own router or this computer's hotspot always works). The links work while the app is open."
+async function shareStatus() {
+  const on = form.localShare.checked && settings.localShare, base = on && await booth.shareLocal() // not before it's saved: nothing listens yet
+  $('#shareStatus').textContent = SHARE_HELP + (!on ? '' : base ? ` Right now phones reach the booth at ${new URL(base).host}.` : " This computer isn't on a network right now: guests see the Share button once it is.")
+}
+form.localShare.onchange = shareStatus
 
 async function saveForm() {
   const next = { ...settings }
@@ -528,7 +556,6 @@ addEventListener('keydown', e => {
 // does the camera start.
 addEventListener('DOMContentLoaded', async () => {
   settings = await booth.getSettings()
-  booth.version().then(v => { $('#version').textContent = `Open Photo Booth ${v}` })
   const more = await Setup.firstRun()
   await applySettings()
   show('attract')

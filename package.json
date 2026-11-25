@@ -44,12 +44,18 @@
       "setup.js",
       "camera.js",
       "cameras.js",
+      "local-share.js",
+      "update.js",
+      "update-ui.js",
       "vendor/faceswap/**",
       "fx.js",
       "models/**",
       "!node_modules/@mediapipe/tasks-vision/**/*.map",
       "!node_modules/@mediapipe/tasks-vision/vision_bundle.{cjs,mjs}",
       "!node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_module_internal.*",
+      "!node_modules/qrcode-generator/{experiment,test}/**",
+      "!node_modules/qrcode-generator/**/*.mjs",
+      "!node_modules/qrcode-generator/dist/qrcode_{SJIS,UTF8}.js",
       "templates/**",
       "site/icon.png",
       "site/cameras.js",
@@ -60,6 +66,13 @@
       "target": [
         {
           "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "arm64",
             "x64"
@@ -99,6 +112,11 @@
       "enableEmbeddedAsarIntegrityValidation": true,
       "onlyLoadAppFromAsar": true,
       "grantFileProtocolExtraPrivileges": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "robert-schmidt",
+      "repo": "open-photo-booth"
     }
   },
   "author": "Open Photo Booth contributors",
@@ -108,7 +126,9 @@
     "url": "https://github.com/robert-schmidt/open-photo-booth.git"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "^1.1.1"
+    "@mediapipe/tasks-vision": "^1.1.1",
+    "electron-updater": "6.8.10",
+    "qrcode-generator": "^2.0.4"
   },
   "booth": {
     "models": "https://github.com/robert-schmidt/open-photo-booth/releases/download/face-models/"

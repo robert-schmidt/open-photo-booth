@@ -7,8 +7,8 @@ const Setup = (() => {
   // [setting, label]
   const TOOLS = [
     ['What guests make', [['modePhoto', '📸 Photos'], ['modeBoomerang', '🔁 Boomerangs'], ['modeVideo', '🎬 Video messages']]],
-    ['What guests can do', [['guestLooks', '🎨 Pick a look'], ['guestBackgrounds', '🖼️ Change the background'], ['guestStickers', '🎉 Stickers and props'], ['guestSwap', '🎭 Face swap: their face in your posters and characters']]],
-    ['Printing', [['autoPrint', '🖨️ Print every photo automatically']]],
+    ['What guests can do', [['guestLooks', '🎨 Pick a look'], ['guestBackgrounds', '🖼️ Change the background'], ['guestStickers', '🎉 Stickers and props'], ['guestDraw', '✍️ Draw and sign on their photos'], ['guestSwap', '🎭 Face swap: their face in your posters and characters']]],
+    ['How they get their photos', [['localShare', '📱 On their phone, by QR code (same Wi-Fi as the booth)'], ['autoPrint', '🖨️ Printed automatically']]],
   ]
   let step = 0, draft = {}, closed, more = false
 

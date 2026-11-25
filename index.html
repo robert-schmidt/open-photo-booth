@@ -11,6 +11,11 @@
   html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden; user-select: none; }
   #video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   #video.mirror { transform: scaleX(-1); }
+  /* Start screen pictures, over the camera view (startSlides in app.js): two layers that fade into each other. */
+  #slides { position: fixed; inset: 0; background: #000; }
+  #slides i { position: absolute; inset: 0; background: center / cover no-repeat; opacity: 0; transition: opacity 1.2s; }
+  #slides i.on { opacity: 1; }
+  body:not([data-screen="attract"]) #slides { display: none; }
   .screen { position: fixed; inset: 0; display: none; }
   body[data-screen="attract"] #attract, body[data-screen="capture"] #capture,
   body[data-screen="review"] #review, body[data-screen="clip"] #clip, body[data-screen="editor"] #editor,
@@ -76,6 +81,10 @@
   .sticker { padding: 0; border-radius: 14px; background: #1c1c20; font-size: 2.4rem; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
   .stickers.props { grid-template-rows: 72px; margin-bottom: 8px; }
   .sticker img { width: 80%; height: 80%; object-fit: contain; }
+  .sticker.pen { border-radius: 50%; border: 2px solid #55555c; }
+  .sticker.pen.on { outline: 3px solid #fff; outline-offset: 3px; }
+  #penColors { display: flex; gap: 10px; padding: 6px; overflow: visible; }
+  #penColors .pen { flex: 1; max-width: 64px; aspect-ratio: 1; }
   .seg { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding: 6px 6px 6px 18px; border-radius: 999px; background: #1c1c20; }
   .seg span { flex: 1.2; font-size: 1.1rem; }
   .seg button { flex: 1; min-height: 56px; padding: 0; font-size: 1.05rem; background: none; }
@@ -96,6 +105,12 @@
   .ai-bar i { display: block; height: 100%; width: 92%; background: var(--accent); transform-origin: left; animation: ai 18s cubic-bezier(.1,.6,.3,1) forwards; }
   @keyframes ai { from { transform: scaleX(0); } }
   #review.busy #result { opacity: .55; transition: opacity .25s .15s; }
+  .sheet { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 8; box-shadow: 0 20px 60px rgba(0,0,0,.6); display: grid; gap: 14px; justify-items: center; width: min(460px, 92%); padding: 26px; border-radius: 22px; background: rgba(15,15,18,.94); }
+  .sheet[hidden] { display: none; }
+  .sheet h2 { margin: 0; font-size: 1.5rem; }
+  .sheet .sub { margin: 0; color: #aaa; text-align: center; }
+  .qr { width: min(280px, 60vh); padding: 14px; border-radius: 14px; background: #fff; line-height: 0; }
+  .qr svg { width: 100%; height: auto; }
   .toggle { width: 100%; margin-top: 12px; min-height: 60px; font-size: 1.2rem; }
   .toggle[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--accent); }
   .chip { font-size: 1rem; padding: 0 1.2em; min-height: 56px; }
@@ -208,6 +223,7 @@
 </head>
 <body data-screen="welcome">
   <video id="video" autoplay muted playsinline></video>
+  <div id="slides" hidden><i></i><i></i></div>
 
   <section id="welcome" class="screen">
     <div class="welcome-card">
@@ -235,6 +251,7 @@
         <button role="tab" data-tab="swapTool"><i>🎭</i>Face swap</button>
         <button role="tab" data-tab="bgTool"><i>🖼️</i>Background</button>
         <button role="tab" data-tab="stickersTool"><i>🎉</i>Stickers</button>
+        <button role="tab" data-tab="drawTool"><i>✍️</i>Draw</button>
       </div>
       <div id="looksTool">
         <div class="tool-head"><h2 id="looksTitle">Look</h2></div>
@@ -257,9 +274,16 @@
         <p class="sub">Tap a sticker to add it. Drag to move, pinch to resize and turn.</p>
         <div id="stickers" class="stickers"></div>
       </div>
+      <div id="drawTool">
+        <p class="sub">Draw or sign on your photos with a finger.</p>
+        <div id="penColors" class="stickers props"></div>
+        <div id="penSize" class="seg" role="group" aria-label="Pen"><span>Pen</span><button data-pen="0.005">Thin</button><button data-pen="0.012">Medium</button><button data-pen="0.028">Thick</button></div>
+        <div class="photo-actions"><button id="drawUndo">↶ Undo</button><button id="drawClear">Clear</button></div>
+      </div>
       </div>
       <div class="actions">
         <button id="print">Print</button>
+        <button id="shareBtn">📱 Share</button>
         <button id="done" class="primary">Done<i id="idle"></i></button>
       </div>
     </aside>
@@ -310,6 +334,7 @@
       </div>
       <div class="actions">
         <button id="clipPrint">Print</button>
+        <button id="clipShare">📱 Share</button>
         <button id="clipDone" class="primary">Done<i class="idle"></i></button>
       </div>
     </aside>
@@ -319,6 +344,13 @@
   <div id="settingsHint" class="settings-hint" hidden>Set up your booth here, or press <kbd></kbd> <span>→</span></div>
   <div id="swapProgress" class="settings-hint" role="status" hidden></div>
   <div id="toast" role="status"></div>
+
+  <div id="shareSheet" class="sheet" hidden>
+      <h2>📱 Scan to get your photo</h2>
+      <div id="qr" class="qr" role="img" aria-label="QR code for your photo"></div>
+      <p id="shareNote" class="sub">Your phone needs to be on the same Wi-Fi as the booth.</p>
+      <button id="shareClose">Close</button>
+  </div>
 
   <dialog id="settings">
     <form id="settingsForm" method="dialog">
@@ -330,6 +362,9 @@
         <span></span><p id="eventStats" class="hint"></p>
         <label for="eventName">Event name</label><input id="eventName" name="eventName">
         <label for="startTextInput">Start button text</label><input id="startTextInput" name="startText">
+        <label for="attractDir">Start screen pictures (image folder)</label>
+        <div class="row"><input id="attractDir" name="attractDir" readonly placeholder="Optional: shown instead of the camera view"><button type="button" data-choose="attractDir">Choose…</button><button type="button" data-clear="attractDir">Clear</button></div>
+        <span></span><p class="hint">One picture is a background; several play as a slideshow until a guest starts.</p>
         <h3>Camera</h3>
         <label for="cameraId">Camera</label><select id="cameraId" name="cameraId"></select>
         <span></span><div><p id="cameraInfo" class="hint"></p><button type="button" id="testShot" hidden>Test shot</button><img id="testShotImg" alt="Test shot" hidden></div>
@@ -347,6 +382,9 @@
         <div class="row"><select id="templateId" name="templateId"></select><button type="button" id="import">Import…</button><button type="button" id="openEditor">Edit layouts…</button></div>
         <img id="preview" alt="Layout preview">
         <label for="filter">Default look</label><select id="filter" name="filter"></select>
+        <label for="lutDir">Your looks (folder of .cube colour presets)</label>
+        <div class="row"><input id="lutDir" name="lutDir" readonly placeholder="Optional: film looks, brand colours"><button type="button" data-choose="lutDir">Choose…</button><button type="button" data-clear="lutDir">Clear</button></div>
+        <span></span><p class="hint">Each .cube file becomes a look for photos, named after the file. Save, and they join the list above.</p>
         <label for="enhance">Auto-enhance photos</label><input id="enhance" name="enhance" type="checkbox">
         <label for="glam">Glam (skin smoothing)</label><select id="glam" name="glam"><option value="off">Off</option><option value="light">Light</option><option value="strong">Strong</option></select>
         <label for="background">Default background</label><select id="background" name="background"><option value="none">Original</option><option value="blur">Blur</option><option value="studio">Studio gray</option><option value="white">Studio white</option><option value="night">Night</option><option value="sunset">Sunset</option><option value="img:0">First of your backgrounds</option></select>
@@ -372,6 +410,9 @@
         <label for="guestStickers">Guests add stickers</label><input id="guestStickers" name="guestStickers" type="checkbox">
         <label for="stickerDir">Your stickers (PNG folder)</label>
         <div class="row"><input id="stickerDir" name="stickerDir" readonly placeholder="Optional: logos, hashtags, props"><button type="button" data-choose="stickerDir">Choose…</button><button type="button" data-clear="stickerDir">Clear</button></div>
+        <label for="guestDraw">Guests draw and sign on their photos</label><input id="guestDraw" name="guestDraw" type="checkbox">
+        <label for="localShare">Guests get their photo on their phone (QR code, same Wi-Fi)</label><input id="localShare" name="localShare" type="checkbox">
+        <span></span><p id="shareStatus" class="hint"></p>
         <h3>Face swap</h3>
         <p class="hint span">Guests put their faces into your scenes: film posters, characters, magazine covers, any picture with a face in it. After their photos, they pick a scene on the editing screen and their face replaces the one in it.</p>
         <label for="guestSwap">Offer face swap to guests</label><input id="guestSwap" name="guestSwap" type="checkbox">
@@ -390,8 +431,11 @@
         <label for="pin">Settings PIN</label><input id="pin" name="pin" type="password" inputmode="numeric" placeholder="Leave empty for no PIN" autocomplete="off">
         <label for="kiosk">Fullscreen kiosk</label><input id="kiosk" name="kiosk" type="checkbox">
         <h3>About</h3>
-        <label>Version</label><span id="version"></span>
-        <label>Source, help and new versions</label><div><button type="button" id="repoLink">github.com/robert-schmidt/open-photo-booth ↗</button></div>
+        <label>Version</label><div class="row"><span id="version"></span><button type="button" id="updateNow" hidden>Restart and update</button></div>
+        <span></span><p id="updateStatus" class="hint"></p>
+        <label for="autoUpdate">Get new versions automatically</label><input id="autoUpdate" name="autoUpdate" type="checkbox">
+        <span></span><p class="hint">The app then asks where its releases are published for a new version every few hours, downloads it and installs it when nobody is using the booth. A change here counts from the next time the app starts.</p>
+        <label>Source and help</label><div><button type="button" id="repoLink">github.com/robert-schmidt/open-photo-booth ↗</button></div>
       </div>
       <div class="footer">
         <button type="button" id="openFolder">Open photos</button>
@@ -443,6 +487,7 @@
   <script src="camera.js"></script>
   <script src="editor.js"></script>
   <script src="node_modules/@mediapipe/tasks-vision/vision_bundle.js"></script>
+  <script src="node_modules/qrcode-generator/dist/qrcode.js"></script>
   <script src="ai.js"></script>
   <script src="fx.js"></script>
   <script src="enhance.js"></script>
@@ -450,6 +495,7 @@
   <script src="capture.js"></script>
   <script src="swap.js"></script>
   <script src="events-ui.js"></script>
+  <script src="update-ui.js"></script>
   <script src="setup.js"></script>
 </body>
 </html>

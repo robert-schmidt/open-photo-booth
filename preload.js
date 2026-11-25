@@ -22,8 +22,11 @@ contextBridge.exposeInMainWorld('booth', {
   removeEvent: id => ipcRenderer.invoke('events:remove', id),
   logSession: entry => ipcRenderer.invoke('session:log', entry),
   listImages: kind => ipcRenderer.invoke('images:list', kind),
+  listLuts: () => ipcRenderer.invoke('luts:list'),
+  shareBase: () => ipcRenderer.invoke('share:base'), // where this session's share link starts ('' when sharing is off)
+  shareLocal: () => ipcRenderer.invoke('share:local'), // the same for sharing over the local network, for the settings
+  sharePhoto: req => ipcRenderer.invoke('share:photo', req),
   loadModel: name => ipcRenderer.invoke('model:load', name),
-  version: () => ipcRenderer.invoke('app:version'),
   openRepo: () => ipcRenderer.invoke('app:repo'),
   camera: {
     list: () => ipcRenderer.invoke('camera:list'),
@@ -38,5 +41,10 @@ contextBridge.exposeInMainWorld('booth', {
     sim: what => ipcRenderer.invoke('camera:sim', what), // tests: unplug, plug, crash or hang the simulated camera
   },
   onCameraFrame: fn => ipcRenderer.on('camera:frame', (_e, jpeg) => fn(jpeg)),
+  update: {
+    status: () => ipcRenderer.invoke('update:status'),
+    install: () => ipcRenderer.invoke('update:install'),
+  },
+  onUpdate: fn => ipcRenderer.on('update:status', (_e, s) => fn(s)),
   onCameraState: fn => ipcRenderer.on('camera:state', (_e, s) => fn(s)),
 })

@@ -60,7 +60,42 @@ const Enhance = (() => {
     return best
   }
 
-  return { apply, exposure, nearest }
+  // A .cube colour preset (a 3D lookup table, as colour grading tools export): its size and its colours as bytes, red
+  // changing fastest, as in the file. Null if the text isn't one.
+  // ponytail: a DOMAIN_MIN/MAX other than 0 to 1 is ignored (rare), and 1D tables aren't read.
+  function cube(text) {
+    let n = 0
+    const rows = []
+    for (const line of text.split(/\r?\n/)) {
+      const t = line.trim(), size = /^LUT_3D_SIZE\s+(\d+)/.exec(t)
+      if (size) n = +size[1]
+      else if (/^[-+.\d]/.test(t)) rows.push(t)
+    }
+    if (n < 2 || n > 129 || rows.length !== n ** 3) return null
+    const data = new Uint8ClampedArray(n ** 3 * 3) // clamps and rounds what it's given
+    rows.forEach((r, i) => { const v = r.split(/\s+/); for (let c = 0; c < 3; c++) data[i * 3 + c] = v[c] * 255 })
+    return { n, data }
+  }
+
+  // Colours through a cube() table, in place: each pixel is blended from the eight table entries around it.
+  // ponytail: on the CPU, about a third of a second for a 4K photo (kept per photo after that); a sampler3D shader
+  // in fx.js if it ever feels slow.
+  function lut(img, { n, data: t }) {
+    const d = img.data, k = (n - 1) / 255, G = n * 3, B = n * n * 3
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i] * k, g = d[i + 1] * k, b = d[i + 2] * k
+      const r0 = Math.min(r | 0, n - 2), g0 = Math.min(g | 0, n - 2), b0 = Math.min(b | 0, n - 2), fr = r - r0, fg = g - g0, fb = b - b0
+      for (let c = 0, p = r0 * 3 + g0 * G + b0 * B; c < 3; c++, p++) {
+        const x00 = t[p] + (t[p + 3] - t[p]) * fr, x10 = t[p + G] + (t[p + G + 3] - t[p + G]) * fr
+        const x01 = t[p + B] + (t[p + B + 3] - t[p + B]) * fr, x11 = t[p + B + G] + (t[p + B + G + 3] - t[p + B + G]) * fr
+        const y0 = x00 + (x10 - x00) * fg, y1 = x01 + (x11 - x01) * fg
+        d[i + c] = y0 + (y1 - y0) * fb
+      }
+    }
+    return img
+  }
+
+  return { apply, exposure, nearest, cube, lut }
 })()
 
 if (typeof module !== 'undefined') module.exports = Enhance
