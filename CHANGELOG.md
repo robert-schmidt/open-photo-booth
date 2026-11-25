@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-25
+
 ### Changed
 
 - **Settings have a menu.** The sections are listed on the left, each with its icon, and one shows at a time, so nothing needs a long scroll. Save and Cancel stay in reach. In a narrow window the menu is a strip along the top.
@@ -90,7 +92,8 @@ First public release.
 - **Input:** `Space`/`Enter` start a session, for USB buttons and foot pedals.
 - **Installers:** macOS (Apple Silicon and Intel, ad-hoc signed) and Windows, built and published by GitHub Actions.
 
-[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.1.0...v0.2.0

@@ -14,6 +14,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 const EXE = process.platform === 'win32' ? 'camera-helper.exe' : 'camera-helper'
 const bin = () => path.join(...(app.isPackaged ? [process.resourcesPath, 'camera-helper'] : [__dirname, 'camera-helper', 'build', process.platform === 'win32' ? 'win' : 'mac']), 'bin', EXE)
 const TIMEOUT = Number(process.env.BOOTH_CAMERA_TIMEOUT) || 15000 // for any answer, a shot included
+// Looking for cameras is the SDKs' slow step (nearly 2 s with nothing plugged in, more on a busy computer), so a
+// shortened TIMEOUT doesn't apply to it: a list cut short would come back empty.
+const LOOK = Math.max(TIMEOUT, 15000)
 const dir = path.join(os.tmpdir(), `booth-camera-${process.pid}`) // the camera's photos, until the page has them
 
 let helper = null, calls = new Map(), seq = 0
@@ -69,11 +72,11 @@ function message(m) {
 
 // One command to the helper. One that isn't answered in time means the helper is stuck: it's stopped (and started again
 // on the next call).
-async function call(op, arg = '') {
+async function call(op, arg = '', ms = TIMEOUT) {
   const p = await start()
   return new Promise((resolve, reject) => {
     const id = ++seq
-    const timer = setTimeout(() => { calls.delete(id); reject(new Error(`camera-helper didn't answer ${op}`)); p.kill('SIGKILL') }, TIMEOUT)
+    const timer = setTimeout(() => { calls.delete(id); reject(new Error(`camera-helper didn't answer ${op}`)); p.kill('SIGKILL') }, ms)
     calls.set(id, { resolve, reject, timer })
     p.stdin.write(`${id} ${op} ${arg}\n`)
   })
@@ -90,7 +93,7 @@ async function lost() {
     await sleep(2000)
     if (want !== w) return
     try {
-      const { cameras } = await call('list')
+      const { cameras } = await call('list', '', LOOK)
       if (!cameras.some(c => `tether:${c.id}` === w.id)) continue
       await call('open', w.id.slice(7))
       await call('live', '1')
@@ -103,7 +106,7 @@ async function lost() {
 
 async function list() {
   try {
-    return (await call('list')).cameras.map(c => ({ id: `tether:${c.id}`, name: c.name }))
+    return (await call('list', '', LOOK)).cameras.map(c => ({ id: `tether:${c.id}`, name: c.name }))
   } catch {
     return [] // no helper on this platform
   }

@@ -261,12 +261,15 @@ try {
   // With a finger, as guests do. (A mouse drag here is thrown off by the real mouse pointer when it rests over the
   // test window: the browser sends its position as moves of the same pointer.)
   const touch = (type, x, y) => cdp('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+  // This check has failed now and then with the sticker left where it was, and never when watched (400 drags in a row
+  // pass). The pointer events the photo saw go into the failure message, so the next time says why.
+  await evaluate(`window.dragLog = []; for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) document.querySelector('#result').addEventListener(t, e => dragLog.push([t, e.pointerType + e.pointerId, Math.round(e.clientX), Math.round(e.clientY)].join(' ')))`)
   await touch('touchStart', mid.x, mid.y)
   await touch('touchMove', mid.x + 40, mid.y + 30)
   await touch('touchMove', mid.x + 80, mid.y + 60)
   await touch('touchEnd')
   await until(`${center} === '${plain}'`, 3000).catch(() => {}) // the layout is redrawn once the drag ends
-  assert.equal(await evaluate(center), plain, 'dragging the sticker away uncovers the middle')
+  assert.equal(await evaluate(center), plain, `dragging the sticker away uncovers the middle (from ${Math.round(mid.x)},${Math.round(mid.y)}: ${await evaluate('dragLog.join("; ")')})`)
   await evaluate(`document.querySelectorAll('.thumb .pick')[1].click(); document.querySelector('#retakeBtn').click()`)
   await until('screen() === "review"')
   await evaluate('current.saved')
