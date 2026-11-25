@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-25
+
 ### Added
 
 - **Camera settings in the app**, for cameras the booth controls over USB (Sony, Nikon Z): exposure mode, ISO, shutter speed, aperture, brightness (exposure compensation), white balance, flash mode and flash strength, under **Settings → Camera**. Each list shows what the camera offers right now, and a change goes to the camera at once. What the camera's own dial decides is shown greyed out.
@@ -84,7 +86,8 @@ First public release.
 - **Input:** `Space`/`Enter` start a session, for USB buttons and foot pedals.
 - **Installers:** macOS (Apple Silicon and Intel, ad-hoc signed) and Windows, built and published by GitHub Actions.
 
-[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/robert-schmidt/open-photo-booth/releases/tag/v0.1.0
