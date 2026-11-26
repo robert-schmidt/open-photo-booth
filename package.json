@@ -1,7 +1,7 @@
 {
   "name": "open-photo-booth",
   "productName": "Open Photo Booth",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Free, open-source photo booth for Windows and macOS.",
   "main": "main.js",
   "license": "MIT",

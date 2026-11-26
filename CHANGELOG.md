@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-26
+
 ### Added
 
 - **Photos to guests' phones, over your own Wi-Fi.** With it on for an event, the editing screen has a Share button: its QR code opens the photo, boomerang or video on the guest's phone, served by the booth's computer. Nothing goes online; phones must be on the same network as the booth.
@@ -110,7 +112,8 @@ First public release.
 - **Input:** `Space`/`Enter` start a session, for USB buttons and foot pedals.
 - **Installers:** macOS (Apple Silicon and Intel, ad-hoc signed) and Windows, built and published by GitHub Actions.
 
-[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.2.1...v0.3.0
