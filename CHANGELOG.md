@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-26
+
 ### Added
 
 - **A pointer to Boothini** in Settings → About and in the README, for booths that want AI styles and online sharing. Nothing else changes: this app stays free and needs no account.
@@ -116,7 +118,8 @@ First public release.
 - **Input:** `Space`/`Enter` start a session, for USB buttons and foot pedals.
 - **Installers:** macOS (Apple Silicon and Intel, ad-hoc signed) and Windows, built and published by GitHub Actions.
 
-[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.0...v0.3.1
