@@ -22,6 +22,7 @@
 - [Why Open Photo Booth?](#why-open-photo-booth)
 - [Who is it for?](#who-is-it-for)
 - [Features](#features)
+- [Looking for more? Try Boothini](#looking-for-more-try-boothini)
 - [Download and install](#download-and-install)
 - [Quick start](#quick-start)
 - [How to use it](#how-to-use-it)
@@ -87,6 +88,17 @@ Open Photo Booth is the opposite:
 | **Kiosk mode** | Fullscreen, the display never sleeps, settings behind the ⚙️ button and an optional PIN |
 | **Buttons and pedals** | `Space` / `Enter` start a session, so USB foot pedals, arcade buttons and wireless presenters work out of the box |
 | **Other cameras** | Any webcam, or any DSLR/mirrorless camera through its webcam utility or an HDMI capture card |
+
+## Looking for more? Try Boothini
+
+[**Boothini**](https://boothini.com/) is Open Photo Booth with online extras, from the same developer. Everything on this page is in it, and it adds:
+
+- **AI magic.** Guests turn their photo into pop art, anime, an oil painting, a 3D cartoon, a superhero or a vintage portrait, in about 15 seconds. For a themed event, every photo can get one style by itself.
+- **Photos from anywhere.** A QR code that works on any phone, with no shared Wi-Fi; the photo by email; and a gallery page for the whole event, kept for 90 days.
+
+Boothini is free to download for macOS and Windows, with no plan and no subscription. Credits pay for the online extras, only when you use them: 1 credit for an AI photo, 50 credits for an event shared online. An account comes with 30 credits, and its first shared event is free.
+
+Open Photo Booth stays free and open source, and nothing in it needs an account.
 
 ## Download and install
 
@@ -391,7 +403,7 @@ Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. I
 
 **Does it run on Linux or a Raspberry Pi?** It's built with Electron, so it may run from source on Linux, but only Windows and macOS are tested and released.
 
-**Can guests get their photos on their phone?** Yes, by QR code, when their phone is on the same Wi-Fi as the booth: see [Photos to phones](#photos-to-phones). Nothing goes online.
+**Can guests get their photos on their phone?** Yes, by QR code, when their phone is on the same Wi-Fi as the booth: see [Photos to phones](#photos-to-phones). Nothing goes online. For a QR code that works from anywhere, and photos by email, there is [Boothini](#looking-for-more-try-boothini).
 
 ## Roadmap
 

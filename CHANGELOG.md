@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **A pointer to Boothini** in Settings → About and in the README, for booths that want AI styles and online sharing. Nothing else changes: this app stays free and needs no account.
+
 ## [0.4.0] - 2026-11-26
 
 ### Added

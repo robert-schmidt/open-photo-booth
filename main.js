@@ -251,6 +251,7 @@ ipcMain.handle('shell:open', async () => {
 ipcMain.handle('app:quit', () => app.quit())
 // The project's page, in the computer's browser. The address is fixed here: the page can't open any other.
 ipcMain.handle('app:repo', () => shell.openExternal('https://github.com/robert-schmidt/open-photo-booth'))
+ipcMain.handle('app:more', () => shell.openExternal('https://boothini.com/'))
 
 if (!gotLock) app.quit()
 app.on('second-instance', () => {

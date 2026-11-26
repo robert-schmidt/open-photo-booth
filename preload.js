@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('booth', {
   sharePhoto: req => ipcRenderer.invoke('share:photo', req),
   loadModel: name => ipcRenderer.invoke('model:load', name),
   openRepo: () => ipcRenderer.invoke('app:repo'),
+  openMore: () => ipcRenderer.invoke('app:more'),
   camera: {
     list: () => ipcRenderer.invoke('camera:list'),
     open: id => ipcRenderer.invoke('camera:open', id),

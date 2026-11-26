@@ -647,6 +647,11 @@ try {
   })()`)
   await fs.writeFile(path.join(shots, 'layouts.jpg'), Buffer.from(sheet.split(',')[1], 'base64'))
 
+  // The settings point at Boothini, for booths that want the online extras.
+  await evaluate(`openSettings().then(() => { const b = document.querySelector('#moreLink'); showSetting(b); b.scrollIntoView({ block: 'center' }) })`)
+  assert.ok(await evaluate(`!!document.querySelector('#moreLink').offsetParent`), 'the pointer to Boothini is in the settings')
+  await clean(); await shot('settings-about.jpg')
+
   // Updates: the settings show the version. A new version on the server is found and downloaded, and its checksum is
   // checked (this one fails, so nothing installs). A ready update installs only once the start screen has been quiet.
   if (!built) { // a built app asks where its releases are published, not the stand-in

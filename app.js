@@ -538,6 +538,7 @@ $('#testShot').onclick = async () => {
 }
 $('#quit').onclick = () => booth.quit()
 $('#repoLink').onclick = () => booth.openRepo()
+$('#moreLink').onclick = () => booth.openMore()
 
 // Booth controls
 $('#attract').onclick = () => Capture.start()
