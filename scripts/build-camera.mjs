@@ -9,7 +9,10 @@
 // Each one found is compiled in, and its runtime files go next to the program:
 //   build/bin/         camera-helper, Sony's libraries, Nikon's module and its settings files
 //   build/Frameworks/  Nikon's driver on macOS (its module looks for it there)
-// Without drivers/, camera-helper has only the simulated camera, and the booth works with webcams as before.
+// libgphoto2 (open source: Canon EOS, Nikon DSLRs, older Sony and more) needs no download of yours: on macOS,
+// `npm run build:gphoto` builds it into camera-helper/build/gphoto/, and from there it is compiled in too:
+//   build/bin/gphoto/  libgphoto2 and the libraries it needs, its camera and port drivers, their licences
+// With neither, camera-helper has only the simulated camera, and the booth works with webcams as before.
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -47,6 +50,15 @@ if (fs.existsSync(path.join(nikon, 'HeaderFile'))) {
   for (const f of fs.readdirSync(files)) if (!/^(TestApp(\.exe)?|\.DS_Store)$/.test(f)) copy(path.join(files, f), path.join(bin, f))
   if (mac) copy(path.join(app, 'Frameworks'), path.join(out, 'Frameworks'))
   sources.push('nikon.cpp'), defines.push('HAVE_NIKON'), includes.push(path.join(nikon, 'HeaderFile'))
+}
+
+// libgphoto2 and what it needs stay separate, replaceable files next to the program, as the LGPL asks.
+const gphoto = path.join(dir, 'build', 'gphoto')
+if (mac && fs.existsSync(path.join(gphoto, 'lib', 'libgphoto2.dylib'))) {
+  for (const f of fs.readdirSync(path.join(gphoto, 'lib'))) copy(path.join(gphoto, 'lib', f), path.join(bin, 'gphoto', f))
+  for (const d of ['camlibs', 'iolibs', 'LICENSES']) copy(path.join(gphoto, d), path.join(bin, 'gphoto', d))
+  sources.push('gphoto.cpp'), defines.push('HAVE_GPHOTO'), includes.push(path.join(gphoto, 'include'))
+  libs.push(`-L${path.join(gphoto, 'lib')}`, '-lgphoto2', '-lgphoto2_port', '-Wl,-rpath,@executable_path/gphoto')
 }
 
 if (mac) {

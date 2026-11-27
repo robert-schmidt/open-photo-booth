@@ -42,6 +42,17 @@ Terms that reach you as a user of such a build:
 - **Nikon.** Nikon's software is provided to you under the restrictions on use, limitations of liability and disclaimers of warranty of Nikon's SDK licence agreement, and Nikon is a third-party beneficiary of those terms. You may use it only as part of this app, and may not copy, modify, reverse engineer or redistribute it separately.
 - Neither maker's trademark or copyright notices may be removed from their files.
 
+## Only in builds made with libgphoto2 (macOS)
+
+Built from the unchanged source releases by `scripts/build-gphoto.mjs`, which names each download and its checksum. They ship as separate libraries in `camera-helper/bin/gphoto/` inside the app, with their licence texts in `LICENSES/` there; each can be replaced by a build of your own.
+
+| Component | Used for | Licence | Source |
+|---|---|---|---|
+| libgphoto2 2.5.34 (with its PTP camera driver) | Controls cameras the makers' SDKs don't cover | LGPL-2.1-or-later | http://www.gphoto.org, https://github.com/gphoto/libgphoto2 |
+| libgphoto2_port 0.12.2 (with its USB driver) | libgphoto2's connection to the camera | LGPL-2.0-or-later | the same source release |
+| libusb 1.0.30 | USB | LGPL-2.1-or-later | https://libusb.info |
+| libltdl, from GNU libtool 2.6.2 | Loads libgphoto2's drivers | LGPL-2.1-or-later | https://www.gnu.org/software/libtool/ |
+
 Sony, Nikon and Canon are trademarks of their owners. Open Photo Booth is not affiliated with or endorsed by them.
 
 ## Tests only

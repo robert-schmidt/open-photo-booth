@@ -22,11 +22,13 @@
 // is never left held.
 //
 // The makers' backends: sony.cpp (Camera Remote SDK) and nikon.cpp (Nikon's SDK for Z cameras), each compiled in only
-// when scripts/build-camera.mjs finds that SDK in drivers/.
+// when scripts/build-camera.mjs finds that SDK in drivers/. gphoto.cpp (libgphoto2, open source) covers the cameras
+// those don't: it is compiled in when scripts/build-gphoto.mjs has built its libraries.
 //
 // Usage: camera-helper [--dir <folder for photos>] [--sim <live view.jpg> <photo.jpg>]
 //        camera-helper probe [--sim ...]   tries the first camera it finds and says how it went (for trying bodies)
 #include "helper.h"
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <deque>
@@ -142,9 +144,19 @@ static fs::path dir = fs::temp_directory_path();
 // The cameras found by the last "list" (an SDK may take a moment to look), and whose they are.
 struct Found { Camera camera; Backend* backend; };
 static std::vector<Found> found;
+// A camera that a maker's SDK controls is listed once, as that SDK's: libgphoto2 (asked last, its ids "gphoto:Sony …")
+// sees the same body. ponytail: so with a new and an old body of one maker plugged in, only the new one is offered.
 static std::vector<Found>& listAll() {
   found.clear();
-  for (auto& b : backends) for (auto& c : b->list()) found.push_back({c, b.get()});
+  for (auto& b : backends) for (auto& c : b->list()) {
+    const bool twice = c.id.rfind("gphoto:", 0) == 0 && std::any_of(found.begin(), found.end(), [&](const Found& f) {
+      const std::string maker = f.camera.id.substr(0, f.camera.id.find(':'));
+      std::string its = c.id.substr(7, maker.size());
+      std::transform(its.begin(), its.end(), its.begin(), [](unsigned char ch) { return char(std::tolower(ch)); });
+      return (maker == "sony" || maker == "nikon") && its == maker;
+    });
+    if (!twice) found.push_back({c, b.get()});
+  }
   return found;
 }
 static const Found& find(const std::string& id) {
@@ -341,6 +353,9 @@ int main(int argc, char** argv) {
 #endif
 #ifdef HAVE_NIKON
   if (auto b = nikon()) backends.push_back(std::move(b));
+#endif
+#ifdef HAVE_GPHOTO
+  if (auto b = gphoto()) backends.push_back(std::move(b));
 #endif
   int code = doProbe ? probe() : serve();
   backends.clear(); // the SDKs shut down

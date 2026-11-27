@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- **Camera control for Canon EOS, Nikon DSLRs, older Sony and more, through libgphoto2 (macOS, experimental).** The open-source library is now part of the Mac app, next to Sony's and Nikon's own SDKs: the cameras it can take photos with show up under **Settings → Camera** as *controlled over USB*. It has only been run against libgphoto2's virtual camera so far, not real bodies: please report how yours does. Builds from source get it with `npm run build:gphoto`.
+- **The guests' screens in German, French, Spanish, Italian or Romanian**, chosen per event under **Settings → Event → Guests' language**: the buttons, hints and countdown texts, and the page a QR code opens on a phone. Your own texts stay as you typed them; the settings stay in English.
 - **The event's own photos on the start screen.** With it on for an event, its newest twelve photos play as a slideshow until a guest starts, after your own start screen pictures if there are any.
 - **`.cube` looks on boomerangs and videos**, not just photos.
 

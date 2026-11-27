@@ -236,33 +236,33 @@
   <section id="attract" class="screen">
     <div><h1 id="eventTitle"></h1><span id="startText" class="cta">Touch to start</span><div id="modes" class="modes" hidden></div><div id="characters" class="characters" hidden></div></div>
   </section>
-  <section id="capture" class="screen"><div id="status"></div><div id="count"></div><button id="stopRec" class="stop-rec" hidden>■ Stop</button></section>
+  <section id="capture" class="screen"><div id="status"></div><div id="count"></div><button id="stopRec" class="stop-rec" data-tr hidden>■ Stop</button></section>
   <section id="review" class="screen">
-    <canvas id="result" aria-label="Your photos"></canvas>
-    <div id="aiBusy" role="status" hidden><p id="aiBusyText"></p><div class="ai-bar"><i></i></div><button id="aiSkip">Skip</button></div>
+    <canvas id="result" aria-label="Your photos" data-tr-label></canvas>
+    <div id="aiBusy" role="status" hidden><p id="aiBusyText"></p><div class="ai-bar"><i></i></div><button id="aiSkip" data-tr>Skip</button></div>
     <aside class="panel">
       <div class="tools">
       <div id="photosTool">
         <div id="thumbs" class="thumbs"></div>
         <p id="photosHint" class="sub"></p>
-        <div class="photo-actions"><button id="retakeBtn">↻ Retake</button><button id="allPhotos" class="chip">Edit all photos</button></div>
+        <div class="photo-actions"><button id="retakeBtn">↻ Retake</button><button id="allPhotos" class="chip" data-tr>Edit all photos</button></div>
       </div>
       <div id="toolTabs" class="tabs" role="tablist">
-        <button role="tab" data-tab="looksTool"><i>🎨</i>Look</button>
-        <button role="tab" data-tab="swapTool"><i>🎭</i>Face swap</button>
-        <button role="tab" data-tab="bgTool"><i>🖼️</i>Background</button>
-        <button role="tab" data-tab="stickersTool"><i>🎉</i>Stickers</button>
-        <button role="tab" data-tab="drawTool"><i>✍️</i>Draw</button>
+        <button role="tab" data-tab="looksTool"><i>🎨</i><span data-tr>Look</span></button>
+        <button role="tab" data-tab="swapTool"><i>🎭</i><span data-tr>Face swap</span></button>
+        <button role="tab" data-tab="bgTool"><i>🖼️</i><span data-tr>Background</span></button>
+        <button role="tab" data-tab="stickersTool"><i>🎉</i><span data-tr>Stickers</span></button>
+        <button role="tab" data-tab="drawTool"><i>✍️</i><span data-tr>Draw</span></button>
       </div>
       <div id="looksTool">
         <div class="tool-head"><h2 id="looksTitle">Look</h2></div>
         <div id="looks" class="looks"></div>
-        <div id="glamSeg" class="seg" role="group" aria-label="Glam"><span>Glam</span><button data-glam="off">Off</button><button data-glam="light">Light</button><button data-glam="strong">Strong</button></div>
+        <div id="glamSeg" class="seg" role="group" aria-label="Glam" data-tr-label><span data-tr>Glam</span><button data-glam="off" data-tr>Off</button><button data-glam="light" data-tr>Light</button><button data-glam="strong" data-tr>Strong</button></div>
         <button id="enhanceBtn" class="toggle"></button>
       </div>
       <div id="swapTool">
-        <div class="tool-head"><h2 id="swapTitle">Face swap</h2><button id="swapTurn" class="chip" hidden>🔀 Swap places</button></div>
-        <p class="sub">Put your face into a scene. It takes a moment.</p>
+        <div class="tool-head"><h2 id="swapTitle">Face swap</h2><button id="swapTurn" class="chip" data-tr hidden>🔀 Swap places</button></div>
+        <p class="sub" data-tr>Put your face into a scene. It takes a moment.</p>
         <div id="scenes" class="looks"></div>
       </div>
       <div id="bgTool">
@@ -270,22 +270,22 @@
         <div id="bgs" class="looks"></div>
       </div>
       <div id="stickersTool">
-        <p class="sub">Props fit every face:</p>
+        <p class="sub" data-tr>Props fit every face:</p>
         <div id="props" class="stickers props"></div>
-        <p class="sub">Tap a sticker to add it. Drag to move, pinch to resize and turn.</p>
+        <p class="sub" data-tr>Tap a sticker to add it. Drag to move, pinch to resize and turn.</p>
         <div id="stickers" class="stickers"></div>
       </div>
       <div id="drawTool">
-        <p class="sub">Draw or sign on your photos with a finger.</p>
+        <p class="sub" data-tr>Draw or sign on your photos with a finger.</p>
         <div id="penColors" class="stickers props"></div>
-        <div id="penSize" class="seg" role="group" aria-label="Pen"><span>Pen</span><button data-pen="0.005">Thin</button><button data-pen="0.012">Medium</button><button data-pen="0.028">Thick</button></div>
-        <div class="photo-actions"><button id="drawUndo">↶ Undo</button><button id="drawClear">Clear</button></div>
+        <div id="penSize" class="seg" role="group" aria-label="Pen" data-tr-label><span data-tr>Pen</span><button data-pen="0.005" data-tr>Thin</button><button data-pen="0.012" data-tr>Medium</button><button data-pen="0.028" data-tr>Thick</button></div>
+        <div class="photo-actions"><button id="drawUndo" data-tr>↶ Undo</button><button id="drawClear" data-tr>Clear</button></div>
       </div>
       </div>
       <div class="actions">
-        <button id="print">Print</button>
-        <button id="shareBtn">📱 Share</button>
-        <button id="done" class="primary">Done<i id="idle"></i></button>
+        <button id="print" data-tr>Print</button>
+        <button id="shareBtn" data-tr>📱 Share</button>
+        <button id="done" class="primary"><span data-tr>Done</span><i id="idle"></i></button>
       </div>
     </aside>
   </section>
@@ -327,16 +327,16 @@
   </section>
 
   <section id="clip" class="screen">
-    <div class="clip-stage"><canvas id="clipCanvas" aria-label="Your boomerang"></canvas><video id="clipVideo" playsinline aria-label="Your video"></video></div>
+    <div class="clip-stage"><canvas id="clipCanvas" aria-label="Your boomerang" data-tr-label></canvas><video id="clipVideo" playsinline aria-label="Your video" data-tr-label></video></div>
     <aside class="panel">
       <div class="tools">
-        <div id="clipLooksTool"><div class="tool-head"><h2>Look</h2></div><div id="clipLooks" class="looks"></div></div>
-        <button id="clipRetake" class="toggle">↻ Retake</button>
+        <div id="clipLooksTool"><div class="tool-head"><h2 data-tr>Look</h2></div><div id="clipLooks" class="looks"></div></div>
+        <button id="clipRetake" class="toggle" data-tr>↻ Retake</button>
       </div>
       <div class="actions">
-        <button id="clipPrint">Print</button>
-        <button id="clipShare">📱 Share</button>
-        <button id="clipDone" class="primary">Done<i class="idle"></i></button>
+        <button id="clipPrint" data-tr>Print</button>
+        <button id="clipShare" data-tr>📱 Share</button>
+        <button id="clipDone" class="primary"><span data-tr>Done</span><i class="idle"></i></button>
       </div>
     </aside>
   </section>
@@ -347,10 +347,10 @@
   <div id="toast" role="status"></div>
 
   <div id="shareSheet" class="sheet" hidden>
-      <h2>📱 Scan to get your photo</h2>
-      <div id="qr" class="qr" role="img" aria-label="QR code for your photo"></div>
-      <p id="shareNote" class="sub">Your phone needs to be on the same Wi-Fi as the booth.</p>
-      <button id="shareClose">Close</button>
+      <h2 data-tr>📱 Scan to get your photo</h2>
+      <div id="qr" class="qr" role="img" aria-label="QR code for your photo" data-tr-label></div>
+      <p id="shareNote" class="sub" data-tr>Your phone needs to be on the same Wi-Fi as the booth.</p>
+      <button id="shareClose" data-tr>Close</button>
   </div>
 
   <dialog id="settings">
@@ -363,6 +363,8 @@
         <span></span><p id="eventStats" class="hint"></p>
         <label for="eventName">Event name</label><input id="eventName" name="eventName">
         <label for="startTextInput">Start button text</label><input id="startTextInput" name="startText">
+        <label for="lang">Guests' language</label><select id="lang" name="lang"></select>
+        <span></span><p class="hint">What guests read on the booth's screens: the buttons, the hints and the countdown. Your own texts (the event's name, a start button text you typed) stay as you wrote them; these settings stay in English.</p>
         <label for="attractDir">Start screen pictures (image folder)</label>
         <div class="row"><input id="attractDir" name="attractDir" readonly placeholder="Optional: shown instead of the camera view"><button type="button" data-choose="attractDir">Choose…</button><button type="button" data-clear="attractDir">Clear</button></div>
         <span></span><p class="hint">One picture is a background; several play as a slideshow until a guest starts.</p>
@@ -488,6 +490,7 @@
 
   <script src="site/cameras.js"></script>
   <script src="layout.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
   <script src="camera.js"></script>
   <script src="editor.js"></script>

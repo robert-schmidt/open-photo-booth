@@ -1,4 +1,4 @@
-/* global booth, Layout, Events, Review, AI, Capture, Setup, Camera, CAMERAS, Enhance, FX */
+/* global tr, translatePage, LANGS, booth, Layout, Events, Review, AI, Capture, Setup, Camera, CAMERAS, Enhance, FX */
 const $ = s => document.querySelector(s)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const FILTERS = {
@@ -60,7 +60,8 @@ async function loadTemplates() {
 
 async function applySettings() {
   $('#eventTitle').textContent = settings.eventName
-  $('#startText').textContent = settings.startText
+  translatePage(settings.lang)
+  $('#startText').textContent = tr(settings.startText) // "Touch to start" follows the language; a text of the operator's own stays
   await loadTemplates()
   if (lutDir !== settings.lutDir) FX.luts(await booth.listLuts()) // read again when the event's looks folder changes
   lutDir = settings.lutDir
@@ -234,13 +235,13 @@ async function shoot() {
 async function startSession() {
   if (screen() !== 'attract') return
   if (!stream || !template) return toast(!stream ? 'No camera found.' : 'No layout available.')
-  if (!video.videoWidth) return toast('Camera is starting, try again in a moment.')
+  if (!video.videoWidth) return toast(tr('Camera is starting, try again in a moment.'))
   show('capture')
   frame(true)
   try {
     const shots = []
     for (let i = 1; i <= template.shots; i++) {
-      $('#status').textContent = template.shots > 1 ? `Photo ${i} of ${template.shots}` : ''
+      $('#status').textContent = template.shots > 1 ? tr('Photo {n} of {total}', { n: i, total: template.shots }) : ''
       shots.push(await shoot())
       if (i < template.shots) await sleep(settings.betweenShots * 1000)
     }
@@ -291,7 +292,7 @@ async function printCurrent() {
       path = await save(two, `${stamp}_print.jpg`)
       w = two.width; h = two.height
     }
-    toast('Printing…')
+    toast(tr('Printing…'))
     const err = await booth.print(path, w / t.dpi, h / t.dpi)
     if (err) toast(`Print failed: ${err}`)
     else booth.logSession({ type: 'print', stamp })
@@ -381,6 +382,7 @@ async function openSettings() {
   fillCamProps() // not waited for: a camera may take a moment to say what it offers
   fillTemplates()
   fill(form.filter, Object.entries(FILTERS).map(([k, [label]]) => [k, label]))
+  fill(form.lang, Object.entries(LANGS))
   fill(form.printer, [['', 'Ask each time (print dialog)'], ...(await booth.listPrinters()).map(p => [p.name, p.displayName || p.name])])
   for (const el of form.elements) if (el.name in settings) el[el.type === 'checkbox' ? 'checked' : 'value'] = settings[el.name]
   updatePreview()

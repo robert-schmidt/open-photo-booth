@@ -8,6 +8,7 @@
   "scripts": {
     "build:faceswap": "node scripts/build-faceswap.mjs",
     "build:camera": "node scripts/build-camera.mjs",
+    "build:gphoto": "node scripts/build-gphoto.mjs",
     "build": "npm run build:faceswap && npm run build:camera",
     "prestart": "npm run build",
     "start": "electron .",
@@ -45,6 +46,7 @@
       "camera.js",
       "cameras.js",
       "local-share.js",
+      "i18n.js",
       "update.js",
       "update-ui.js",
       "vendor/faceswap/**",

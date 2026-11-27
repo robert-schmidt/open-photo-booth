@@ -38,6 +38,15 @@ await new Promise(r => updates.listen(0, '127.0.0.1', r))
 process.env.BOOTH_UPDATES = `http://127.0.0.1:${updates.address().port}/`
 // A camera the booth controls, simulated: it shows this photo, and takes it again at 20 megapixels.
 process.env.BOOTH_SIM_CAMERA = path.join(import.meta.dirname, 'test', 'portrait.jpg')
+// libgphoto2's virtual camera, where `npm run build:gphoto` has been run: a Nikon that isn't there, with this photo on its card.
+const virtual = path.join(import.meta.dirname, 'camera-helper', 'build', 'gphoto', 'test-iolibs'), has = f => fs.access(f).then(() => true, () => false)
+const gphoto = !process.env.BOOTH_APP && await has(path.join(virtual, 'vusb.so')) && await has(path.join(import.meta.dirname, 'camera-helper', 'build', 'mac', 'bin', 'gphoto'))
+if (gphoto) {
+  process.env.IOLIBS = virtual
+  process.env.VCAMERADIR = path.join(tmp, 'card')
+  await fs.mkdir(process.env.VCAMERADIR)
+  await fs.copyFile(path.join(import.meta.dirname, 'test', 'portrait.jpg'), path.join(process.env.VCAMERADIR, 'one.jpg'))
+}
 process.env.BOOTH_BACKGROUND = '1' // the window doesn't take the keyboard from whoever is at this computer
 process.env.BOOTH_CAMERA_TIMEOUT = '4000' // a stuck camera-helper is restarted after this long
 
@@ -141,7 +150,7 @@ try {
   await until(`document.querySelector('#settings').open`, 3000)
   assert.equal(await evaluate('screen()'), 'attract', 'the settings button starts no session')
   await until(`[...form.cameraId.options].some(o => o.value === 'tether:sim' && o.text.includes('controlled over USB'))`)
-  assert.ok(await evaluate(`['Sony: ', 'α7 IV', 'Nikon: ', 'Z6III', 'Canon: '].every(s => document.querySelector('#supportedCameras').textContent.includes(s))`), 'the supported cameras are listed')
+  assert.ok(await evaluate(`['Sony: ', 'α7 IV', 'Nikon: ', 'Z6III', 'Canon EOS, Nikon DSLRs, older Sony: ', 'libgphoto2'].every(s => document.querySelector('#supportedCameras').textContent.includes(s))`), 'the supported cameras are listed')
   await evaluate('document.querySelector("#settings").close()')
   await evaluate(`booth.saveSettings({ ...settings, cameraId: 'tether:sim' }).then(s => { settings = s; return applySettings() })`)
   await until('Camera.controlled() && video.videoWidth === 1024')
@@ -215,6 +224,20 @@ try {
   await evaluate('current.saved')
   await evaluate('Review.finish()')
   await until(backOnCamera)
+  // A camera through libgphoto2: listed next to the others, its settings read and changed, its photo fetched. (The
+  // virtual camera has no live view, so the booth isn't switched to it.)
+  if (gphoto) {
+    const id = 'tether:gphoto:Nikon DSC D750'
+    assert.ok((await evaluate('booth.camera.list()')).some(c => c.id === id && c.name === 'Nikon DSC D750'), 'the libgphoto2 camera is listed')
+    await evaluate(`booth.camera.open(${JSON.stringify(id)})`)
+    const shutter = () => evaluate(`booth.camera.props().then(r => r.props.find(p => p.key === 'shutter')).then(p => p.options[p.value])`)
+    assert.equal(await shutter(), '0.0100s')
+    await evaluate(`booth.camera.set('shutter', 1)`)
+    assert.equal(await shutter(), '0.1000s', 'a setting changed on the camera')
+    assert.equal(await evaluate('booth.camera.status().then(s => s.battery)'), '50%')
+    assert.equal(await evaluate('booth.camera.shoot().then(jpeg => jpeg.byteLength)'), (await fs.stat(path.join(process.env.VCAMERADIR, 'one.jpg'))).size, "the camera's own file comes back")
+    await evaluate(`booth.camera.open('tether:sim')`)
+  } else console.log('(libgphoto2 is not built here, or this is a built app: its camera is not checked)')
   await evaluate(`booth.saveSettings({ ...settings, cameraId: '' }).then(s => { settings = s; return applySettings() })`)
   await until('!Camera.controlled() && video.videoWidth > 0 && video.videoWidth !== 1024')
   console.log('controlled camera ok')
@@ -368,6 +391,11 @@ try {
   await evaluate(`booth.saveSettings({ ...settings, attractDir: '', attractOwn: true }).then(s => { settings = s; return applySettings() })`)
   await until(`screen() === 'attract' && !document.querySelector('#slides').hidden && !!document.querySelector('#slides i.on.own') && getComputedStyle(document.querySelector('#slides i.on')).backgroundImage.startsWith('url("data:image/jpeg')`, 15000)
   await clean(); await shot('start-own-photos.jpg')
+  // The guests' language: the start screen's own text follows it, a text the operator typed doesn't.
+  const speak = (lang, startText) => evaluate(`booth.saveSettings({ ...settings, lang: '${lang}', startText: '${startText}' }).then(s => { settings = s; return applySettings() }).then(() => [document.documentElement.lang, document.querySelector('#startText').textContent])`)
+  assert.deepEqual(await speak('de', 'Touch to start'), ['de', 'Zum Starten tippen'])
+  assert.deepEqual(await speak('de', 'Los!'), ['de', 'Los!'])
+  assert.deepEqual(await speak('en', 'Touch to start'), ['en', 'Touch to start'])
   await evaluate(`booth.saveSettings({ ...settings, lutDir: '', attractDir: '', attractOwn: false, guestDraw: false }).then(s => { settings = s; return applySettings() })`)
   await until(`document.querySelector('#slides').hidden && !FILTERS['lut:Rotated']`)
   console.log('looks, pictures, drawing and sharing ok')
@@ -647,6 +675,15 @@ try {
   await evaluate(`document.querySelector('[data-tab="looksTool"]').click(); document.querySelectorAll('.thumb .pick')[1].click()`)
   await clean(); await sleep(400)
   await shot('review.jpg')
+  // The same screen in German, and back.
+  const texts = async lang => {
+    await evaluate(`translatePage('${lang}'); for (const t of ['stickersTool', 'looksTool']) document.querySelector(\`[data-tab="\${t}"]\`).click()`)
+    await sleep(800) // the panel redraws with its previews
+    return evaluate(`['#looksTitle', '#retakeBtn', '#print', '#done span', '#looks .look:nth-child(2)', '[data-tab="stickersTool"]'].map(s => document.querySelector(s).textContent).concat(document.querySelector('#result').ariaLabel)`)
+  }
+  assert.deepEqual(await texts('de'), ['Look für Foto 2', '↻ Foto 2 neu aufnehmen', 'Drucken', 'Fertig', 'Schwarz-Weiß', '🎉Sticker', 'Deine Fotos'])
+  await clean(); await shot('review-german.jpg')
+  assert.deepEqual(await texts('en'), ['Look for photo 2', '↻ Retake photo 2', 'Print', 'Done', 'Black & white', '🎉Stickers', 'Your photos'])
   const sheet = await evaluate(`(() => {
     const ts = ['classic-strip', 'postcard', 'grid', 'single'].map(n => templates.find(t => t.id === 'builtin:' + n)), H = 900, gap = 40
     const imgs = ts.map(t => compose(placeholderShots(t.shots), t))

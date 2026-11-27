@@ -1,5 +1,5 @@
-// What camera-helper's backends share with main.cpp: one Backend per maker's SDK (sony.cpp, nikon.cpp), compiled in
-// only when that SDK is present (scripts/build-camera.mjs).
+// What camera-helper's backends share with main.cpp: one Backend per maker's SDK (sony.cpp, nikon.cpp) and one for
+// libgphoto2 (gphoto.cpp), each compiled in only when its libraries are present (scripts/build-camera.mjs).
 #pragma once
 #include <chrono>
 #include <cstdio>
@@ -62,3 +62,4 @@ fs::path exeDir(); // the folder camera-helper runs from, where the SDKs' files 
 
 std::unique_ptr<Backend> sony(); // nullptr when the SDK can't start
 std::unique_ptr<Backend> nikon();
+std::unique_ptr<Backend> gphoto();

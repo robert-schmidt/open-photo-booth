@@ -17,7 +17,7 @@ const exists = p => fs.stat(p).then(() => true, () => false)
 const dataUrl = async file => `data:${MIME[path.extname(file).toLowerCase()] || 'image/png'};base64,${(await fs.readFile(file)).toString('base64')}`
 const defaults = () => ({
   eventName: 'My Event', startText: 'Touch to start', cameraId: '', micId: '', mirror: true, templateId: 'builtin:classic-strip', filter: 'none',
-  countdown: 3, betweenShots: 2, reviewSeconds: 45, enhance: true, guestRetake: true, guestLooks: true, guestStickers: true, stickerDir: '', glam: 'light', noBlink: true, guestBackgrounds: true, backgroundDir: '', background: 'none', lutDir: '', attractDir: '', attractOwn: false, guestDraw: false, localShare: false,
+  countdown: 3, betweenShots: 2, reviewSeconds: 45, enhance: true, guestRetake: true, guestLooks: true, guestStickers: true, stickerDir: '', glam: 'light', noBlink: true, guestBackgrounds: true, backgroundDir: '', background: 'none', lutDir: '', attractDir: '', attractOwn: false, lang: 'en', guestDraw: false, localShare: false,
   modePhoto: true, modeBoomerang: false, modeVideo: false, videoSeconds: 10, greenScreen: false, chromaTolerance: 50, guestSwap: false, swapDir: '', swapLive: false,
   outputDir: path.join(app.getPath('pictures'), 'Open Photo Booth'),
   printer: '', copies: 1, autoPrint: false, print2up: true, kiosk: false, pin: '', autoUpdate: true,
@@ -128,7 +128,8 @@ ipcMain.handle('events:remove', async (_e, id) => { await Events.remove(id); ret
 // is (its key goes on the end), or '' when sharing is off or the computer isn't on a network. Only files from the
 // photos folder are handed over, so the renderer can't put anything else on the network.
 const localBase = async () => {
-  if ((await readSettings()).localShare) return LocalShare.base()
+  const s = await readSettings()
+  if (s.localShare) return LocalShare.base(s.lang)
   LocalShare.stop()
   return ''
 }

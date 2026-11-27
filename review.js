@@ -1,4 +1,4 @@
-/* global booth, $, settings, current, template, compose, save, printCurrent, show, screen, shoot, toast, canvas, loadImage, FILTERS, Enhance, FX, AI, Layout, qrcode, Swap */
+/* global tr, booth, $, settings, current, template, compose, save, printCurrent, show, screen, shoot, toast, canvas, loadImage, FILTERS, Enhance, FX, AI, Layout, qrcode, Swap */
 // The review screen. Guests pick a look and auto-enhance for all photos or just one, retake a single photo,
 // add stickers, draw or sign, and finish with Print or Done. Done also happens by itself after the event's idle time, shown as a shrinking bar.
 const Review = (() => {
@@ -218,7 +218,7 @@ const Review = (() => {
         }
       }
     }
-    if (!added.length) return toast('No faces found for props. Try a sticker instead!')
+    if (!added.length) return toast(tr('No faces found for props. Try a sticker instead!'))
     stickers.push(...added)
     sel = null
     dirty = true
@@ -238,7 +238,7 @@ const Review = (() => {
     const bg = settings.background
     return bg?.startsWith('img:') ? extra.backgrounds[+bg.slice(4)] || false : bg !== 'none' && bg
   }
-  const backgrounds = () => [['none', 'Original'], ['blur', 'Blur'], ...Object.entries(FX.BACKDROPS).map(([k, [label]]) => [k, label]), ...extra.backgrounds.map((_, i) => [`img:${i}`, `Custom ${i + 1}`])]
+  const backgrounds = () => [['none', 'Original'], ['blur', 'Blur'], ...Object.entries(FX.BACKDROPS).map(([k, [label]]) => [k, label]), ...extra.backgrounds.map((_, i) => [`img:${i}`, tr('Custom {n}', { n: i + 1 })])]
 
   // Switches tabs right away; the tool's previews follow when ready.
   function showTab() {
@@ -283,34 +283,34 @@ const Review = (() => {
       return box
     }))
     $('#photosHint').hidden = !many || selected !== null
-    $('#photosHint').textContent = settings.guestRetake ? 'Tap a photo to edit or retake just that one.' : 'Tap a photo to edit just that one.'
+    $('#photosHint').textContent = tr(settings.guestRetake ? 'Tap a photo to edit or retake just that one.' : 'Tap a photo to edit just that one.')
     $('#retakeBtn').hidden = !settings.guestRetake || (many && selected === null)
-    $('#retakeBtn').textContent = many ? `↻ Retake photo ${selected + 1}` : '↻ Retake'
+    $('#retakeBtn').textContent = many ? tr('↻ Retake photo {n}', { n: selected + 1 }) : tr('↻ Retake')
     $('#retakeBtn').onclick = () => retake(selected ?? 0)
     $('#allPhotos').hidden = selected === null || !many
 
     const all = f => (selected === null ? edits.every(f) : f(edits[selected]))
-    $('#looksTitle').textContent = selected !== null ? `Look for photo ${selected + 1}` : many ? 'Look for all photos' : 'Look'
+    $('#looksTitle').textContent = selected !== null ? tr('Look for photo {n}', { n: selected + 1 }) : tr(many ? 'Look for all photos' : 'Look')
     const options = (list, field) => list.map(([key, label], k) => {
       const on = all(e => e[field] === key), b = el('button', 'look' + (on ? ' on' : ''))
-      b.append(img(previews[k]), label)
+      b.append(img(previews[k]), tr(label)) // a look or backdrop of the booth's own; an event's own names stay
       b.ariaPressed = String(on)
       b.onclick = () => change(e => { e[field] = key })
       return b
     })
     if (tab === 'looksTool') $('#looks').replaceChildren(...options(Object.keys(FILTERS).map(k => [k, k === 'none' ? 'Original' : FILTERS[k][0]]), 'look'))
     if (tab === 'bgTool') $('#bgs').replaceChildren(...options(backgrounds(), 'bg'))
-    $('#swapTitle').textContent = many ? `Face swap for photo ${target + 1}` : 'Face swap'
+    $('#swapTitle').textContent = many ? tr('Face swap for photo {n}', { n: target + 1 }) : tr('Face swap')
     const swapped = edits[target].ai?.startsWith('swap:') && aiCache.get(current.shots[target])?.get(edits[target].ai)
     $('#swapTurn').hidden = !(swapped?.people > 1)
     if (tab === 'swapTool') $('#scenes').replaceChildren(...[null, ...extra.scenes].map((scene, k) => {
       const cur = edits[target].ai || 'none', on = k ? cur.startsWith(`swap:${k - 1}:`) : cur === 'none', b = el('button', 'look' + (on ? ' on' : ''))
-      b.append(scene ? Object.assign(new Image(), { src: scene.src, alt: '' }) : el('span', 'ai-icon', '📷'), k ? `Scene ${k}` : 'Original')
+      b.append(scene ? Object.assign(new Image(), { src: scene.src, alt: '' }) : el('span', 'ai-icon', '📷'), k ? tr('Scene {n}', { n: k }) : tr('Original'))
       b.ariaPressed = String(on)
       b.onclick = () => (k ? swapInto(k - 1) : magic('none'))
       return b
     }))
-    $('#bgTitle').textContent = selected !== null ? `Background for photo ${selected + 1}` : many ? 'Background for all photos' : 'Background'
+    $('#bgTitle').textContent = selected !== null ? tr('Background for photo {n}', { n: selected + 1 }) : tr(many ? 'Background for all photos' : 'Background')
     $('#props').replaceChildren(...PROPS.map(p => {
       const b = el('button', 'sticker', p[0])
       b.ariaLabel = `Put ${p[1]} on every face`
@@ -343,7 +343,7 @@ const Review = (() => {
     }
     const enhanced = all(e => e.enhance)
     $('#enhanceBtn').ariaPressed = String(enhanced)
-    $('#enhanceBtn').textContent = `✨ Auto-enhance: ${enhanced ? 'on' : 'off'}`
+    $('#enhanceBtn').textContent = tr(enhanced ? '✨ Auto-enhance: on' : '✨ Auto-enhance: off')
     $('#enhanceBtn').onclick = () => change(e => { e.enhance = !enhanced })
   }
 
@@ -360,7 +360,7 @@ const Review = (() => {
     const i = selected ?? 0, shot = current.shots[i], key = `swap:${k}:${turn}`
     if (aiCache.get(shot)?.has(key)) return magic(key)
     const job = ++aiJob
-    busy('🎭 Putting you in the picture…')
+    busy(tr('🎭 Putting you in the picture…'))
     const source = await processed(shot, { ...edits[i], look: 'none', glam: 'off', bg: 'none', ai: null })
     const art = await Swap.into(extra.scenes[k], source, turn).catch(e => { console.warn('Face swap failed:', e); return undefined })
     if (art) {
@@ -372,8 +372,8 @@ const Review = (() => {
     }
     if (job !== aiJob || screen() !== 'review') return
     busy(null)
-    if (art === null) return toast("We couldn't see a face to swap. Try another photo, or a retake!")
-    if (!art) return toast("Face swap didn't work this time. Try another scene.")
+    if (art === null) return toast(tr("We couldn't see a face to swap. Try another photo, or a retake!"))
+    if (!art) return toast(tr("Face swap didn't work this time. Try another scene."))
     edits[i].ai = key
     dirty = true
     await render()
@@ -445,7 +445,7 @@ const Review = (() => {
     share(false)
     clearTimeout(timer)
     show('capture')
-    $('#status').textContent = current.shots.length > 1 ? `Photo ${i + 1}, take two` : ''
+    $('#status').textContent = current.shots.length > 1 ? tr('Photo {n}, take two', { n: i + 1 }) : ''
     try {
       const shot = await shoot()
       current.shots[i] = shot

@@ -149,6 +149,7 @@ Open settings with the **⚙️ in the top-right corner of the start screen** or
 | **Event**, **New**, **Remove** | The event in use. **New** starts another one as a copy of the current event and opens the setup guide. **Remove** takes an event off the list; its photos stay |
 | **Event name** | Shown on the start screen, used for `{event}` in layouts and in the name of this event's photo folder |
 | **Start button text** | The text on the start button ("Touch to start", "Tap for photos!", in any language) |
+| **Guests' language** | The guests' screens in English, German, French, Spanish, Italian or Romanian, per event: buttons, hints, the countdown texts and the page a QR code opens on a phone. Your own texts stay as typed, and the settings stay in English. |
 | **Start screen pictures** | A folder of images shown on the start screen in place of the camera view: one is a background, several play as a slideshow until a guest starts. (Not with live face swap characters, where guests need to see themselves) |
 | **Camera** | Which camera to use. A camera the booth controls is marked *controlled over USB*; the line below says what the camera in use delivers, and **Test shot** takes one photo with it |
 | **Microphone** | For video messages |
@@ -191,7 +192,7 @@ There are two ways a camera reaches the booth.
 |---|---|---|
 | Sony | α1, α1 II, α9 II, α9 III, α7 IV, α7 V, α7C, α7C II, α7CR, α7R IV, α7R IVA, α7R V, α7R VI, α7S III, α6700, ZV-E1, ZV-E10 II, FX2, FX3, FX3A, FX30, RX1R III, RX0 II, ILX-LR1 | Set the camera's USB mode to **Remote Shoot (PC Remote)**. On Windows, install Sony's USB driver |
 | Nikon | Z9, Z8, Zf, Z7II, Z7, Z6III, Z6II, Z6, Z5II, Z5IIC, Z5, Z50II, Z50, Z30, Zfc, ZR | Quit NX Tether and Camera Control Pro |
-| Canon | Not controlled yet | Use webcam mode (below) |
+| Canon EOS, Nikon DSLRs, older Sony and others | **macOS only, experimental:** the cameras [libgphoto2](http://www.gphoto.org/proj/libgphoto2/support.php) lists with image capture | Quit the maker's own tethering app (EOS Utility, Camera Control Pro, Imaging Edge). Sony: USB mode **PC Remote** |
 
 Good to know:
 
@@ -203,11 +204,12 @@ Good to know:
   - **Auto** lets the camera work out the exposure for every photo, with its flash on if it has one. Good for a room where the light changes.
   - **Set exposure from test shots** takes a few test shots and adjusts the camera until they come out right. With the camera in **M** it changes the ISO and leaves your shutter and aperture alone, which is how to set up studio flashes; in the other modes it changes the brightness (exposure compensation).
   - **Flash:** a flash on the camera fires with the camera's shutter. Live view can't show a flash, so judge it from a test shot. Studio flashes on a radio trigger aren't seen by the camera at all: use **M**, about 1/125 s, and set the exposure from test shots.
+- **Cameras through libgphoto2** (the last row of the table) are new in a different way: the booth's side of it has only been run against libgphoto2's own virtual camera, never a real body. What to expect: live view and autofocus on Canon EOS and Nikon DSLRs, the shutter and the photo on most others (the booth shows the webcam's picture when a camera sends no live view), and the settings the camera offers under its usual names. macOS's own camera service takes every camera that is plugged in; the booth ends that service (`ptpcamerad`) when it has to, and macOS starts it again by itself. A camera that Sony's or Nikon's SDK controls is always run through that SDK instead. Please report how your camera does.
 - If the camera is unplugged or its battery dies mid-event, the booth carries on with a webcam and switches back when the camera returns.
 - Live view pauses after 10 idle minutes on the start screen to keep the camera cool, and resumes at the next touch.
 - This is new. The camera code is written against Sony's and Nikon's SDKs and checked with a simulated camera, but has had little time on real bodies, and the Windows side is untested. Please [report](https://github.com/robert-schmidt/open-photo-booth/issues) what works and what doesn't, with your camera model.
 - The **macOS downloads** control cameras. The **Windows download doesn't yet** (its camera code hasn't been built on Windows): there, every camera works in webcam mode.
-- Camera control needs a build that includes the makers' SDKs. They can't be kept in this repository, so a build from source has none unless you add them (see [Development](#development)); such a build still works with every camera in webcam mode.
+- Sony and Nikon Z control needs a build that includes the makers' SDKs. They can't be kept in this repository, so a build from source has none unless you add them (see [Development](#development)). libgphoto2 is open source: `npm run build:gphoto` adds it to any build on macOS. Without either, every camera still works in webcam mode.
 
 **2. Webcam mode.** Open Photo Booth also uses your operating system's camera system, so anything that shows up as a camera works:
 
@@ -400,7 +402,7 @@ Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. I
 
 **Does it add a watermark?** No. Add your own logo with an Image element if you want one.
 
-**Can it control my DSLR or mirrorless camera directly (autofocus, flash, full-resolution capture)?** Yes for recent Sony and Nikon Z cameras, in beta: see [Cameras](#cameras). Canon and older bodies work through their webcam utility or an HDMI capture card for now.
+**Can it control my DSLR or mirrorless camera directly (autofocus, flash, full-resolution capture)?** Yes for recent Sony and Nikon Z cameras, in beta: see [Cameras](#cameras). On macOS, Canon EOS, Nikon DSLRs and older bodies can be tried through libgphoto2 (experimental); everywhere, they work through their webcam utility or an HDMI capture card.
 
 **Does it run on Linux or a Raspberry Pi?** It's built with Electron, so it may run from source on Linux, but only Windows and macOS are tested and released.
 
@@ -410,7 +412,8 @@ Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. I
 
 Ideas for future versions (contributions welcome):
 
-- Direct camera control for Canon, Nikon DSLRs and older Sony bodies (Sony and Nikon Z are in, in beta)
+- Camera control on Windows, and time on real Canon and Nikon DSLR bodies for the libgphoto2 side
+- More languages for the guests' screens: one row per text in `i18n.js`
 
 ## Development
 
@@ -436,6 +439,8 @@ npm run dist   # build installers for your OS into dist/
 
 - Sony's [Camera Remote SDK](https://support.d-imaging.sony.co.jp/app/sdk/en/index.html): its `RemoteCli.zip`, unpacked as `drivers/sony/mac/RemoteCli/` and `drivers/sony/win/RemoteCli/`
 - Nikon's [Remote SDK for Z cameras](https://sdk.nikonimaging.com): its `Module` folder as `drivers/nikon/z/Module/` (on macOS, also unzip `Module/Mac/BinaryFile/TestApp.zip` next to itself)
+
+**libgphoto2** (macOS). `npm run build:gphoto` downloads the source releases of libgphoto2, libusb and libtool (for its libltdl), checks them against the checksums in `scripts/build-gphoto.mjs`, and builds them for both Mac architectures into `camera-helper/build/gphoto/` (about a minute and a half; Xcode's command line tools are all it needs). The next `npm run build` compiles the libgphoto2 backend into `camera-helper` and puts the libraries next to it. `npm test` and `npm run e2e` then also run it against libgphoto2's virtual camera.
 
 `camera-helper/build/mac/bin/camera-helper probe` tries the first camera it finds without the app: it lists cameras, counts live view frames and takes a photo. `BOOTH_SIM_CAMERA=photo.jpg npm start` adds a simulated camera showing that photo.
 

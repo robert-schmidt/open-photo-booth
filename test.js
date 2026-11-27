@@ -117,10 +117,61 @@ assert.equal(E.cube('hello'), null)
     const [again, body] = run(`console.log(base); console.log(await fetch(base.replace('/p/', '/f/') + '${key}').then(r => r.text())); process.exit()`).trim().split('\n')
     assert.equal(again, first, 'the same address after a restart')
     assert.equal(body, 'not really a photo', 'and the photo is still behind its link')
+    assert.match(run(`await S.base('de'); console.log(await fetch(base + 'zzzzzzzzzzzz').then(r => r.text())); process.exit()`), /<html lang="de">[^]*Dein Foto ist unterwegs/, "the phone's page speaks the event's language")
   } else console.log('(no network on this computer: sharing after a restart is not checked)')
   fs.writeFileSync(path.join(dir, 'shares.json'), JSON.stringify({ port: 0, photos: [['../../etc', { file: '/etc/passwd', event: 'x' }], [key, { file: '/etc/passwd', event: 'x' }]] }))
   assert.equal(run(`console.log(await fetch(base.replace('/p/', '/f/') + '${key}').then(r => r.status, () => 'no network')); process.exit()`).trim().replace('no network', '404'), '404', 'a links file with other kinds of files in it is not served')
   fs.rmSync(dir, { recursive: true })
+}
+
+// Translations (i18n.js): every row has all five languages with the same {placeholders}, and every text the guest
+// screens show has a row: the ones marked in index.html, the ones the code passes to tr(), and the names of the
+// modes, looks and backdrops (which reach tr() through a variable, so they are listed here).
+{
+  const { LANGS, TEXTS, say } = require('./i18n.js'), holes = s => (s.match(/\{\w+\}/g) || []).sort().join()
+  for (const [en, row] of Object.entries(TEXTS)) {
+    assert.equal(row.length, Object.keys(LANGS).length - 1, `"${en}" has every language`)
+    for (const t of row) assert.ok(t && holes(t) === holes(en), `"${en}" → "${t}" keeps its placeholders`)
+  }
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'), used = ['Touch to start', 'Photos', 'Boomerang', 'Video message',
+    'Boomerang! Get ready to move…', 'Video message: get ready…', 'Black & white', 'Sepia', 'Warm', 'Vivid', 'Faded', 'Comic', 'Sketch', 'Blur', 'Studio gray', 'Studio white', 'Night', 'Sunset']
+  for (const m of html.matchAll(/<\w+[^>]*\sdata-tr(?=[\s>])[^>]*>([^<]+)</g)) used.push(m[1])
+  for (const m of html.matchAll(/aria-label="([^"]+)"[^>]*\sdata-tr-label/g)) used.push(m[1])
+  for (const f of ['app.js', 'capture.js', 'review.js']) {
+    const js = fs.readFileSync(path.join(__dirname, f), 'utf8')
+    for (let at = js.indexOf('tr('); at >= 0; at = js.indexOf('tr(', at + 1)) {
+      if (/[\w.$]/.test(js[at - 1])) continue // filter(, attr(…
+      let end = at + 3
+      for (let depth = 1; depth; end++) depth += js[end] === '(' ? 1 : js[end] === ')' ? -1 : 0
+      for (const m of js.slice(at, end).matchAll(/'([^']+)'|"([^"]+)"/g)) used.push(m[1] ?? m[2])
+    }
+  }
+  assert.ok(used.length > 60, 'the guest texts were found')
+  for (const t of used) assert.ok(TEXTS[/^[^\p{L}{]*(.*)$/su.exec(t)[1]], `"${t}" is translated`)
+  assert.equal(say('de', '↻ Retake photo {n}', { n: 2 }), '↻ Foto 2 neu aufnehmen')
+  assert.equal(say('ro', 'Photo {n} of {total}', { n: 1, total: 3 }), 'Fotografia 1 din 3')
+  assert.equal(say('en', '📱 Share'), '📱 Share')
+  assert.equal(say('fr', 'Our wedding!'), 'Our wedding!', "a text of the operator's own stays as written")
+  assert.equal(say('xx', 'Done'), 'Done')
+}
+
+// Cameras through libgphoto2 (camera-helper/gphoto.cpp), where `npm run build:gphoto` and build:camera have been run:
+// the helper finds libgphoto2's virtual camera, opens it, reads its settings and fetches the photo it "takes".
+{
+  const build = path.join(__dirname, 'camera-helper', 'build'), helper = path.join(build, 'mac', 'bin', 'camera-helper'), virtual = path.join(build, 'gphoto', 'test-iolibs')
+  if (fs.existsSync(path.join(virtual, 'vusb.so')) && fs.existsSync(path.join(build, 'mac', 'bin', 'gphoto'))) {
+    const { spawnSync } = require('node:child_process'), os = require('node:os')
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gphoto-')), card = path.join(dir, 'card'), photo = path.join(__dirname, 'test', 'portrait.jpg')
+    fs.mkdirSync(card)
+    fs.copyFileSync(photo, path.join(card, 'one.jpg'))
+    const out = spawnSync(helper, ['probe', '--dir', dir], { encoding: 'utf8', env: { ...process.env, IOLIBS: virtual, VCAMERADIR: card } }).stderr // probe talks to people, on stderr
+    assert.match(out, /Found: Nikon DSC D750 \(gphoto:Nikon DSC D750\)/, out)
+    assert.match(out, /Opened Nikon DSC D750, battery: 50%/, out)
+    assert.match(out, /shutter: 0\.0100s \(9 values\)[^]*aperture: f\/2\.8[^]*ev: 0 \(13 values\)/, out)
+    assert.ok(fs.readFileSync(path.join(dir, 'gphoto-1.jpg')).equals(fs.readFileSync(photo)), 'the photo fetched from the camera is the one it took')
+    fs.rmSync(dir, { recursive: true })
+    assert.ok(!fs.existsSync(path.join(build, 'mac', 'bin', 'gphoto', 'iolibs', 'vusb.so')), 'the virtual camera is not in what ships')
+  } else console.log('(libgphoto2 is not built here: its camera backend is not checked)')
 }
 
 // main.js keeps a downloaded face swap model only if it has the fingerprint browser-inswapper checks before using it.

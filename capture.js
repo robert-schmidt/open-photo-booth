@@ -1,4 +1,4 @@
-/* global booth, $, settings, current: writable, template, compose, save, printCurrent, show, screen, toast, canvas, sleep, stream, video, startSession, FILTERS, FX, Review, Swap */
+/* global tr, booth, $, settings, current: writable, template, compose, save, printCurrent, show, screen, toast, canvas, sleep, stream, video, startSession, FILTERS, FX, Review, Swap */
 // Capture modes. Guests pick Photos, Boomerang or Video message on the start screen (the event chooses which).
 // A boomerang is a short burst played forward and back; a video message has sound. Both save as MP4, take a look, and
 // share like photos; a boomerang also makes a flip-book layout of its frames, which is what Print prints.
@@ -22,7 +22,7 @@ const Capture = (() => {
     $('#modes').hidden = modes.length < 2
     $('#modes').replaceChildren(...modes.map(([mode, icon, label]) => {
       const b = document.createElement('button')
-      b.append(Object.assign(document.createElement('i'), { textContent: icon }), label)
+      b.append(Object.assign(document.createElement('i'), { textContent: icon }), tr(label))
       b.onclick = e => { e.stopPropagation(); start(mode) }
       return b
     }))
@@ -33,7 +33,7 @@ const Capture = (() => {
   function start(mode = enabled().length === 1 ? enabled()[0][0] : null) {
     if (!mode || screen() !== 'attract') return
     if (mode === 'photo') return startSession()
-    if (!stream || !video.videoWidth) return toast('Camera is starting, try again in a moment.')
+    if (!stream || !video.videoWidth) return toast(tr('Camera is starting, try again in a moment.'))
     ;(mode === 'boomerang' ? boomerang() : message()).catch(e => {
       show('attract')
       toast(`Something went wrong: ${e.message}`)
@@ -42,7 +42,7 @@ const Capture = (() => {
 
   async function countdown(status) {
     show('capture')
-    $('#status').textContent = status
+    $('#status').textContent = tr(status)
     for (let n = settings.countdown; n > 0; n--) { $('#count').textContent = n; await sleep(1000) }
     $('#count').textContent = ''
   }
@@ -57,13 +57,13 @@ const Capture = (() => {
 
   async function boomerang() {
     await countdown('Boomerang! Get ready to move…')
-    $('#status').textContent = 'Move!'
+    $('#status').textContent = tr('Move!')
     let frames = []
     for (let i = 0; i < FRAMES; i++) { frames.push(grabSmall()); await sleep(1000 / FPS) }
     // The event's background (green screen or cut-out) on every frame: about a second for the burst.
     const backdrop = await Review.backdrop()
     if (backdrop) {
-      $('#status').textContent = 'Making your boomerang…'
+      $('#status').textContent = tr('Making your boomerang…')
       const swapped = []
       for (const f of frames) swapped.push(await FX.background(f, backdrop, settings.greenScreen && settings.chromaTolerance).catch(() => f))
       frames = swapped
@@ -101,7 +101,7 @@ const Capture = (() => {
     for (const audio of [settings.micId && { deviceId: { exact: settings.micId } }, true].filter(Boolean)) {
       mic ??= await navigator.mediaDevices.getUserMedia({ audio }).catch(() => null)
     }
-    if (!mic) toast('No microphone found, so this video has no sound.')
+    if (!mic) toast(tr('No microphone found, so this video has no sound.'))
     const type = mic ? SOUND : VIDEO, chunks = []
     try {
       await countdown('Video message: get ready…')
@@ -115,7 +115,7 @@ const Capture = (() => {
       $('#stopRec').hidden = false
       $('#stopRec').onclick = () => stop()
       const end = Date.now() + settings.videoSeconds * 1000
-      const tick = setInterval(() => { $('#status').innerHTML = `<span class="rec-dot">●</span> Recording · ${Math.max(0, Math.ceil((end - Date.now()) / 1000))}` }, 200)
+      const tick = setInterval(() => { $('#status').innerHTML = `<span class="rec-dot">●</span> ${tr('Recording')} · ${Math.max(0, Math.ceil((end - Date.now()) / 1000))}` }, 200)
       await Promise.race([sleep(settings.videoSeconds * 1000), pressed])
       clearInterval(tick)
       $('#stopRec').hidden = true
@@ -237,7 +237,7 @@ const Capture = (() => {
       const b = document.createElement('button'), thumb = canvas(160, Math.round(160 * still.height / still.width))
       paint(thumb.getContext('2d'), still, key, thumb.width, thumb.height)
       b.className = 'look' + (current.look === key ? ' on' : '')
-      b.append(Object.assign(new Image(), { src: thumb.toDataURL('image/jpeg', 0.8), alt: '' }), key === 'none' ? 'Original' : FILTERS[key][0])
+      b.append(Object.assign(new Image(), { src: thumb.toDataURL('image/jpeg', 0.8), alt: '' }), key === 'none' ? tr('Original') : tr(FILTERS[key][0]))
       b.onclick = () => { current.look = key; looks() }
       return b
     }))
