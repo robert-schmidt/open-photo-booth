@@ -165,7 +165,8 @@ Open settings with the **⚙️ in the top-right corner of the start screen** or
 | **Finish after no touch for** | Seconds of no touch before the editing screen finishes on its own |
 | **Save photos to** | The main photos folder; each event gets a subfolder |
 | **Guests can make** | Photos, boomerangs, video messages (and the video's length) |
-| **Your looks** | A folder of `.cube` colour presets (3D LUTs, as Resolve, Photoshop and most grading tools export). Each file becomes a look for photos, named after the file, for guests and as the event's default look. Boomerangs and videos keep the built-in looks |
+| **This event's photos on the start screen** | The event's newest twelve photos play as a slideshow on the start screen, after your own pictures if there are any. Every guest then sees earlier guests' photos, so it is off unless you turn it on |
+| **Your looks** | A folder of `.cube` colour presets (3D LUTs, as Resolve, Photoshop and most grading tools export). Each file becomes a look, named after the file, for guests and as the event's default look: on photos, boomerangs and videos |
 | **Guest tools** | Which tools guests see: looks, retake, backgrounds, stickers, drawing. Fewer tools keep a long queue moving. Point **Your backgrounds** and **Your stickers** at folders of your own images. With **draw and sign** on, guests write on their photos with a finger, in six colours and three pen widths |
 | **Guests get their photo on their phone** | A **Share** button on the editing screen shows a QR code; scanning it opens the photo, boomerang or video on the guest's phone, served by this computer. See [Photos to phones](#photos-to-phones) |
 | **Printer** | *Ask each time* shows the print dialog; choosing a printer prints silently |
@@ -410,8 +411,6 @@ Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. I
 Ideas for future versions (contributions welcome):
 
 - Direct camera control for Canon, Nikon DSLRs and older Sony bodies (Sony and Nikon Z are in, in beta)
-- A slideshow of the event's own photos on the start screen
-- `.cube` looks on boomerangs and videos
 
 ## Development
 

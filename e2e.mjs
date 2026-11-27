@@ -364,13 +364,17 @@ try {
     console.log('(no network on this computer: the sharing server is not checked)')
     await evaluate('Review.finish()')
   }
-  await evaluate(`booth.saveSettings({ ...settings, lutDir: '', attractDir: '', guestDraw: false }).then(s => { settings = s; return applySettings() })`)
+  // The event's own photos as the start screen's slideshow, shown whole: the session above is in it.
+  await evaluate(`booth.saveSettings({ ...settings, attractDir: '', attractOwn: true }).then(s => { settings = s; return applySettings() })`)
+  await until(`screen() === 'attract' && !document.querySelector('#slides').hidden && !!document.querySelector('#slides i.on.own') && getComputedStyle(document.querySelector('#slides i.on')).backgroundImage.startsWith('url("data:image/jpeg')`, 15000)
+  await clean(); await shot('start-own-photos.jpg')
+  await evaluate(`booth.saveSettings({ ...settings, lutDir: '', attractDir: '', attractOwn: false, guestDraw: false }).then(s => { settings = s; return applySettings() })`)
   await until(`document.querySelector('#slides').hidden && !FILTERS['lut:Rotated']`)
   console.log('looks, pictures, drawing and sharing ok')
 
   // 1e. Capture modes: with boomerangs and videos on, the start screen offers three buttons. A boomerang saves its
   // flip-book layout at once and its MP4 when the guest finishes; a video message records sound and saves at once.
-  await evaluate(`booth.saveSettings({ ...settings, modeBoomerang: true, modeVideo: true, videoSeconds: 3, background: 'night' }).then(s => { settings = s; return applySettings() })`)
+  await evaluate(`booth.saveSettings({ ...settings, modeBoomerang: true, modeVideo: true, videoSeconds: 3, background: 'night', lutDir: ${JSON.stringify(extras)} }).then(s => { settings = s; return applySettings() })`)
   await until('video.videoWidth > 0')
   assert.deepEqual(await evaluate(`[...document.querySelectorAll('#modes button')].map(b => b.textContent)`), ['📸Photos', '🔁Boomerang', '🎬Video message'])
   assert.ok(await evaluate(`document.querySelector('#startText').hidden`), 'buttons replace "Touch to start"')
@@ -381,6 +385,10 @@ try {
   assert.ok(await evaluate(`(([r, g, b]) => b > r + 20)(current.frames[0].getContext('2d').getImageData(10, 10, 1, 1).data)`), "the event's background is on the boomerang frames")
   assert.ok((await fs.stat(flip)).size > 10000, 'flip-book layout saved at once')
   await until(`document.querySelectorAll('#clipLooks .look').length > 1`)
+  // The event's .cube look works on a boomerang too: each colour channel is handed on, frame by frame.
+  const px = sel => `[...document.querySelector('${sel}').getContext('2d').getImageData(10, 10, 1, 1).data]`
+  await evaluate(`window.plain = [...current.frames[0].getContext('2d').getImageData(10, 10, 1, 1).data]; [...document.querySelectorAll('#clipLooks .look')].find(b => b.textContent === 'Rotated').click()`)
+  await until(`(c => [0, 1, 2].every(i => Math.abs(c[i] - plain[(i + 1) % 3]) <= 12))(${px('#clipCanvas')})`, 5000)
   await evaluate(`[...document.querySelectorAll('#clipLooks .look')].find(b => b.textContent === 'Black & white').click()`)
   await sleep(300); await clean(); await shot('boomerang.jpg') // the preview redraws 15 times a second
   await evaluate('Capture.finish()')
@@ -411,7 +419,11 @@ try {
   assert.ok(seconds > 2 && seconds < 4.5, `video lasts the event's 3 s: ${seconds}`)
   // A look on the video message shows at once, and goes into the saved file when the guest finishes.
   await until(`document.querySelectorAll('#clipLooks .look').length > 1`)
+  // A .cube look is drawn from the playing video; a CSS look is a filter on the video itself.
+  await evaluate(`[...document.querySelectorAll('#clipLooks .look')].find(b => b.textContent === 'Rotated').click()`)
+  await until(`(v => { if (!v.hidden || document.querySelector('#clipCanvas').hidden || !v.videoWidth) return false; const c = canvas(v.videoWidth, v.videoHeight); c.getContext('2d').drawImage(v, 0, 0); const plain = c.getContext('2d').getImageData(10, 10, 1, 1).data, got = ${px('#clipCanvas')}; return Math.max(...plain.slice(0, 3)) - Math.min(...plain.slice(0, 3)) > 10 && [0, 1, 2].every(i => Math.abs(got[i] - plain[(i + 1) % 3]) <= 12) })(document.querySelector('#clipVideo'))`, 5000)
   await evaluate(`[...document.querySelectorAll('#clipLooks .look')].find(b => b.textContent === 'Black & white').click()`)
+  assert.ok(await evaluate(`!document.querySelector('#clipVideo').hidden && document.querySelector('#clipCanvas').hidden`), 'back to the video itself')
   assert.match(await evaluate(`document.querySelector('#clipVideo').style.filter`), /grayscale/)
   const recorded = await evaluate('current.blob.size')
   await evaluate('Capture.finish()')
@@ -430,7 +442,7 @@ try {
   })()`)
   assert.ok(restyled.tint < 16, `saved in black & white: ${restyled.tint}`)
   assert.ok(restyled.seconds > 2 && restyled.seconds < 4.5, `restyled video is as long: ${restyled.seconds}`)
-  await evaluate(`booth.saveSettings({ ...settings, modeBoomerang: false, modeVideo: false, background: 'none' }).then(s => { settings = s; return applySettings() })`)
+  await evaluate(`booth.saveSettings({ ...settings, modeBoomerang: false, modeVideo: false, background: 'none', lutDir: '' }).then(s => { settings = s; return applySettings() })`)
   assert.ok(!(await evaluate(`document.querySelector('#startText').hidden`)))
   // With sharing off again the server is gone, and so are the links.
   await evaluate(`booth.saveSettings({ ...settings, localShare: false }).then(s => { settings = s })`)

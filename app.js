@@ -11,7 +11,7 @@ const FILTERS = {
 }
 const video = $('#video'), form = $('#settingsForm')
 for (const c of CAMERAS) $('#supportedCameras').append(Object.assign(document.createElement('p'), { textContent: `${c.maker}: ${[c.models.join(', '), c.note].filter(Boolean).join('. ')}` }))
-let settings, templates = [], template, assets = {}, stream, current, lutDir, slideTimer
+let settings, templates = [], template, assets = {}, stream, current, lutDir, slideTimer, slideRun = 0
 const CAMERA_TERMS = `Before the booth controls your camera:
 
 • A camera's maker may stop covering it under warranty once it has been controlled by software like this. Sony says so for its cameras.
@@ -20,7 +20,10 @@ const CAMERA_TERMS = `Before the booth controls your camera:
 
 Control this camera?`
 
-const show = screen => { document.body.dataset.screen = screen }
+const show = screen => {
+  document.body.dataset.screen = screen
+  if (screen === 'attract' && settings?.attractOwn) startSlides() // with the photos of the session that just ended
+}
 const screen = () => document.body.dataset.screen
 const fill = (select, options) => select.replaceChildren(...options.map(([value, text]) => new Option(text, value)))
 const loadImage = src => new Promise((res, rej) => Object.assign(new Image(), { onload() { res(this) }, onerror: rej, src }))
@@ -69,18 +72,24 @@ async function applySettings() {
 
 // Start screen pictures: the event's folder of images shows in place of the camera view, one as a background, several
 // as a slideshow. Not with live face swap characters: there guests need to see themselves.
+// The start screen's pictures: the event's own folder of them, then (if the event shows them) its newest photos,
+// which are shown whole where the others fill the screen.
 async function startSlides() {
+  const run = ++slideRun, layers = $('#slides').children
+  const slides = settings.guestSwap && settings.swapLive ? [] : [...(await booth.listImages('attractDir')).map(url => ({ url })), ...(await booth.listImages('own')).map(url => ({ url, own: true }))]
+  if (run !== slideRun) return // asked again meanwhile
   clearInterval(slideTimer)
-  const urls = settings.guestSwap && settings.swapLive ? [] : await booth.listImages('attractDir'), layers = $('#slides').children
   let n = 0
   const next = () => {
-    layers[n % 2].style.backgroundImage = `url("${urls[n % urls.length]}")`
+    const s = slides[n % slides.length]
+    layers[n % 2].style.backgroundImage = `url("${s.url}")`
+    layers[n % 2].classList.toggle('own', !!s.own)
     layers[n % 2].classList.add('on')
     layers[++n % 2].classList.remove('on')
   }
-  $('#slides').hidden = !urls.length
-  if (urls.length) next()
-  if (urls.length > 1) slideTimer = setInterval(next, 7000)
+  $('#slides').hidden = !slides.length
+  if (slides.length) next()
+  if (slides.length > 1) slideTimer = setInterval(next, 7000)
 }
 
 function grab() {

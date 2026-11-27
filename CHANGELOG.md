@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **The event's own photos on the start screen.** With it on for an event, its newest twelve photos play as a slideshow until a guest starts, after your own start screen pictures if there are any.
+- **`.cube` looks on boomerangs and videos**, not just photos.
+
 ## [0.4.1] - 2026-11-26
 
 ### Added

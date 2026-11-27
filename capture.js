@@ -79,11 +79,20 @@ const Capture = (() => {
     open()
   }
 
-  // The event's look, unless it's an art look (those need a photo's faces and take too long per frame).
-  const look = () => (FILTERS[settings.filter] && !FX.ART[settings.filter] ? settings.filter : 'none')
+  // The looks clips can have: every look but the art ones (those need a photo's faces and take too long per frame).
+  // A CSS look is a canvas filter; a .cube look ('lut:…') is drawn frame by frame through FX.grade.
+  const lut = look => look.startsWith('lut:')
+  const clipLook = k => !!FILTERS[k] && (!FX.ART[k] || lut(k))
+  const look = () => (clipLook(settings.filter) ? settings.filter : 'none')
+  // One frame (a canvas or the playing video) onto ctx in a look, at w × h.
+  function paint(ctx, src, look, w = src.width, h = src.height) {
+    ctx.filter = FILTERS[look]?.[1] || 'none'
+    ctx.drawImage(lut(look) ? FX.grade(src, look) : src, 0, 0, w, h)
+  }
 
   // The event's layout, its photo slots filled with frames spread over the burst.
-  const flipbook = (frames, look) => compose(Array.from({ length: template.shots }, (_, i) => frames[Math.round(i * (frames.length - 1) / Math.max(1, template.shots - 1))]), template, { filter: look, qr: null })
+  const flipbook = (frames, look) => compose(Array.from({ length: template.shots }, (_, i) => frames[Math.round(i * (frames.length - 1) / Math.max(1, template.shots - 1))])
+    .map(f => (lut(look) ? FX.ART[look][1](f) : f)), template, { filter: lut(look) ? 'none' : look, qr: null })
 
   async function message() {
     show('capture') // at once: the start screen would take a second tap while the microphone opens
@@ -133,8 +142,7 @@ const Capture = (() => {
     const stopped = new Promise(r => { rec.onstop = r })
     rec.start()
     for (const f of [...seq, ...seq]) {
-      ctx.filter = FILTERS[look]?.[1] || 'none'
-      ctx.drawImage(f, 0, 0)
+      paint(ctx, f, look)
       track.requestFrame()
       await sleep(1000 / FPS)
     }
@@ -155,8 +163,7 @@ const Capture = (() => {
     const rec = new MediaRecorder(new MediaStream(tracks), { mimeType: blob.type, videoBitsPerSecond: 5e6 })
     rec.ondataavailable = e => e.data.size && chunks.push(e.data)
     const stopped = new Promise(r => { rec.onstop = r }), ended = new Promise(r => { v.onended = r })
-    ctx.filter = FILTERS[look][1]
-    const draw = () => { ctx.drawImage(v, 0, 0, c.width, c.height); if (!v.ended) requestAnimationFrame(draw) }
+    const draw = () => { paint(ctx, v, look, c.width, c.height); if (!v.ended) requestAnimationFrame(draw) }
     rec.start(1000)
     await v.play()
     draw()
@@ -184,7 +191,7 @@ const Capture = (() => {
       let i = 0, last = 0
       const draw = t => {
         if (screen() !== 'clip' || current !== c) return
-        if (t - last >= 1000 / FPS) { ctx.filter = FILTERS[c.look]?.[1] || 'none'; ctx.drawImage(seq[i++ % seq.length], 0, 0); last = t }
+        if (t - last >= 1000 / FPS) { paint(ctx, seq[i++ % seq.length], c.look); last = t }
         frame = requestAnimationFrame(draw)
       }
       frame = requestAnimationFrame(draw)
@@ -207,15 +214,28 @@ const Capture = (() => {
     v.load()
   }
 
-  // A boomerang draws its frames in the look; a video shows it as a CSS filter until it's restyled on Done.
+  // A boomerang draws its frames in the look. A video shows a CSS look as a filter on itself, and a .cube look on
+  // the canvas, drawn from the playing video; either way the file is restyled on Done.
   function looks() {
-    const still = current.still ?? current.frames[Math.floor(FRAMES / 2)]
-    $('#clipVideo').style.filter = FILTERS[current.look]?.[1] || 'none'
-    $('#clipLooks').replaceChildren(...Object.keys(FILTERS).filter(k => !FX.ART[k]).map(key => {
+    const c = current, still = c.still ?? c.frames[Math.floor(FRAMES / 2)], v = $('#clipVideo'), cv = $('#clipCanvas')
+    v.style.filter = FILTERS[c.look]?.[1] || 'none'
+    if (c.kind === 'video') {
+      cancelAnimationFrame(frame)
+      v.hidden = lut(c.look)
+      cv.hidden = !lut(c.look)
+      const draw = () => {
+        if (current !== c || !lut(c.look) || !v.src) return
+        if (v.videoWidth) {
+          if (cv.width !== v.videoWidth || cv.height !== v.videoHeight) Object.assign(cv, { width: v.videoWidth, height: v.videoHeight })
+          paint(cv.getContext('2d'), v, c.look, cv.width, cv.height)
+        }
+        frame = requestAnimationFrame(draw)
+      }
+      if (lut(c.look)) frame = requestAnimationFrame(draw)
+    }
+    $('#clipLooks').replaceChildren(...Object.keys(FILTERS).filter(clipLook).map(key => {
       const b = document.createElement('button'), thumb = canvas(160, Math.round(160 * still.height / still.width))
-      const t = thumb.getContext('2d')
-      t.filter = FILTERS[key][1]
-      t.drawImage(still, 0, 0, thumb.width, thumb.height)
+      paint(thumb.getContext('2d'), still, key, thumb.width, thumb.height)
       b.className = 'look' + (current.look === key ? ' on' : '')
       b.append(Object.assign(new Image(), { src: thumb.toDataURL('image/jpeg', 0.8), alt: '' }), key === 'none' ? 'Original' : FILTERS[key][0])
       b.onclick = () => { current.look = key; looks() }

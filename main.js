@@ -17,7 +17,7 @@ const exists = p => fs.stat(p).then(() => true, () => false)
 const dataUrl = async file => `data:${MIME[path.extname(file).toLowerCase()] || 'image/png'};base64,${(await fs.readFile(file)).toString('base64')}`
 const defaults = () => ({
   eventName: 'My Event', startText: 'Touch to start', cameraId: '', micId: '', mirror: true, templateId: 'builtin:classic-strip', filter: 'none',
-  countdown: 3, betweenShots: 2, reviewSeconds: 45, enhance: true, guestRetake: true, guestLooks: true, guestStickers: true, stickerDir: '', glam: 'light', noBlink: true, guestBackgrounds: true, backgroundDir: '', background: 'none', lutDir: '', attractDir: '', guestDraw: false, localShare: false,
+  countdown: 3, betweenShots: 2, reviewSeconds: 45, enhance: true, guestRetake: true, guestLooks: true, guestStickers: true, stickerDir: '', glam: 'light', noBlink: true, guestBackgrounds: true, backgroundDir: '', background: 'none', lutDir: '', attractDir: '', attractOwn: false, guestDraw: false, localShare: false,
   modePhoto: true, modeBoomerang: false, modeVideo: false, videoSeconds: 10, greenScreen: false, chromaTolerance: 50, guestSwap: false, swapDir: '', swapLive: false,
   outputDir: path.join(app.getPath('pictures'), 'Open Photo Booth'),
   printer: '', copies: 1, autoPrint: false, print2up: true, kiosk: false, pin: '', autoUpdate: true,
@@ -145,11 +145,14 @@ const MODELS = ['face_landmarker.task', 'selfie_segmenter.tflite']
 ipcMain.handle('model:load', (_e, name) => (MODELS.includes(name) ? fs.readFile(path.join(__dirname, 'models', name)) : null))
 // Images from one of the active event's folders (stickers, backgrounds, scenes, start screen pictures), read here so
 // the renderer can't pick the path.
+// 'own' is the event's own finished photos, newest first, for its start screen (when the event shows them).
+// ponytail: sent whole, like the pictures of the other kinds: twelve photos of about 1 MB. Thumbnails if a booth feels it.
 ipcMain.handle('images:list', async (_e, kind) => {
-  const dir = ['stickerDir', 'backgroundDir', 'swapDir', 'attractDir'].includes(kind) && (await readSettings())[kind]
+  const s = await readSettings(), own = kind === 'own'
+  const dir = own ? s.attractOwn && (await Events.dir(s)) : ['stickerDir', 'backgroundDir', 'swapDir', 'attractDir'].includes(kind) && s[kind]
   if (!dir) return []
-  const files = (await fs.readdir(dir, { withFileTypes: true }).catch(() => [])).filter(f => f.isFile() && /\.(png|webp|gif|jpe?g)$/i.test(f.name))
-  return Promise.all(files.map(f => f.name).sort().slice(0, 60).map(f => dataUrl(path.join(dir, f))))
+  const names = (await fs.readdir(dir, { withFileTypes: true }).catch(() => [])).filter(f => f.isFile() && (own ? /^\d{8}-\d{6}\.jpg$/ : /\.(png|webp|gif|jpe?g)$/i).test(f.name)).map(f => f.name).sort()
+  return Promise.all((own ? names.reverse().slice(0, 12) : names.slice(0, 60)).map(f => dataUrl(path.join(dir, f))))
 })
 // The active event's .cube colour presets (extra looks, see fx.js), as text. A 65-point table is about 8 MB of it.
 ipcMain.handle('luts:list', async () => {

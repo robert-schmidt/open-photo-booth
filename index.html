@@ -15,6 +15,7 @@
   #slides { position: fixed; inset: 0; background: #000; }
   #slides i { position: absolute; inset: 0; background: center / cover no-repeat; opacity: 0; transition: opacity 1.2s; }
   #slides i.on { opacity: 1; }
+  #slides i.own { inset: 3vh; background-size: contain; }
   body:not([data-screen="attract"]) #slides { display: none; }
   .screen { position: fixed; inset: 0; display: none; }
   body[data-screen="attract"] #attract, body[data-screen="capture"] #capture,
@@ -365,6 +366,8 @@
         <label for="attractDir">Start screen pictures (image folder)</label>
         <div class="row"><input id="attractDir" name="attractDir" readonly placeholder="Optional: shown instead of the camera view"><button type="button" data-choose="attractDir">Choose…</button><button type="button" data-clear="attractDir">Clear</button></div>
         <span></span><p class="hint">One picture is a background; several play as a slideshow until a guest starts.</p>
+        <label for="attractOwn">Show this event's photos on the start screen</label><input id="attractOwn" name="attractOwn" type="checkbox">
+        <span></span><p class="hint">The newest twelve play as a slideshow, after your own pictures if there are any. Every guest then sees earlier guests' photos: leave it off where that isn't wanted.</p>
         <h3>Camera</h3>
         <label for="cameraId">Camera</label><select id="cameraId" name="cameraId"></select>
         <span></span><div><p id="cameraInfo" class="hint"></p><button type="button" id="testShot" hidden>Test shot</button><img id="testShotImg" alt="Test shot" hidden></div>

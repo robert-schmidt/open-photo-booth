@@ -31,9 +31,10 @@ const FX = (() => {
   }
 
   // Runs frag over src. Every shader gets `img` (the source) and `px` (one pixel in uv units); numbers and arrays in u become uniforms.
-  function run(frag, src, u = {}) {
+  // draw() leaves the result in the shared canvas (good until the next call: for video frames); run() copies it out.
+  function draw(frag, src, u = {}) {
     if (!gl) init()
-    const { width: w, height: h } = src, p = program(frag)
+    const w = src.videoWidth || src.width, h = src.videoHeight || src.height, p = program(frag)
     Object.assign(gl.canvas, { width: w, height: h })
     gl.viewport(0, 0, w, h)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src)
@@ -46,8 +47,11 @@ const FX = (() => {
       gl[`uniform${a.length}f`](at, ...a)
     }
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    const out = canvas(w, h)
-    out.getContext('2d').drawImage(gl.canvas, 0, 0)
+    return gl.canvas
+  }
+  function run(frag, src, u) {
+    const out = canvas(src.width, src.height)
+    out.getContext('2d').drawImage(draw(frag, src, u), 0, 0)
     return out
   }
 
@@ -228,13 +232,41 @@ void main() {
   for (const [k, [label]] of Object.entries(ART)) FILTERS[k] = [label, 'none']
 
   // The event's .cube colour presets ([{ name, text }], from its looks folder) as extra looks, named after their files.
-  // Like the art looks they are for photos; boomerangs and videos keep the looks a CSS filter can do.
+  // A photo goes through Enhance.lut; the frames of boomerangs and videos through grade(), the same table on the GPU.
+  const tables = new Map() // look -> { n, data, tex }
+  const GRADE = `#version 300 es
+precision highp float; precision highp sampler3D;
+uniform sampler2D img; uniform sampler3D lut; uniform float n;
+in vec2 uv; out vec4 o;
+void main() { vec4 c = texture(img, uv); o = vec4(texture(lut, c.rgb * (n - 1.) / n + .5 / n).rgb, c.a); }`
+  // One frame (a canvas or a playing video) in a .cube look. The result is the shared canvas: draw it before the next call.
+  function grade(src, look) {
+    if (!gl) init()
+    const t = tables.get(look), p = program(GRADE)
+    gl.activeTexture(gl.TEXTURE1)
+    if (!t.tex) {
+      gl.bindTexture(gl.TEXTURE_3D, (t.tex = gl.createTexture()))
+      for (const k of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T, gl.TEXTURE_WRAP_R]) gl.texParameteri(gl.TEXTURE_3D, k, gl.CLAMP_TO_EDGE)
+      for (const k of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER]) gl.texParameteri(gl.TEXTURE_3D, k, gl.LINEAR)
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false) // a table isn't a picture (and WebGL refuses to flip one)
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+      gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB8, t.n, t.n, t.n, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array(t.data.buffer))
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+    }
+    gl.bindTexture(gl.TEXTURE_3D, t.tex)
+    gl.activeTexture(gl.TEXTURE0)
+    gl.useProgram(p)
+    gl.uniform1i(gl.getUniformLocation(p, 'lut'), 1)
+    return draw(GRADE, src, { n: t.n })
+  }
   function luts(files) {
+    for (const [k, t] of tables) { gl?.deleteTexture(t.tex); tables.delete(k) }
     for (const k of Object.keys(ART)) if (k.startsWith('lut:')) { delete ART[k]; delete FILTERS[k] }
     for (const { name, text } of files) {
       const table = Enhance.cube(text)
       if (!table) { console.warn(`${name}.cube isn't a 3D colour table: skipped`); continue }
       FILTERS[`lut:${name}`] = [name, 'none']
+      tables.set(`lut:${name}`, table)
       ART[`lut:${name}`] = [name, src => {
         const out = canvas(src.width, src.height), ctx = out.getContext('2d', { willReadFrequently: true })
         ctx.drawImage(src, 0, 0)
@@ -244,5 +276,5 @@ void main() {
     }
   }
 
-  return { run, glam, background, chromaKey, luts, BACKDROPS, ART }
+  return { run, glam, background, chromaKey, luts, grade, BACKDROPS, ART }
 })()
