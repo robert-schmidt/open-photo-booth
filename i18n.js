@@ -80,6 +80,12 @@ const TEXTS = {
   'Print': ['Drucken', 'Imprimer', 'Imprimir', 'Stampa', 'Tipărește'],
   'Share': ['Teilen', 'Partager', 'Compartir', 'Condividi', 'Distribuie'],
   'Done': ['Fertig', 'Terminé', 'Listo', 'Fatto', 'Gata'],
+  // Guests' details
+  'A few words about you': ['Ein paar Worte zu dir', 'Quelques mots sur vous', 'Unas palabras sobre ti', 'Due parole su di te', 'Câteva cuvinte despre tine'],
+  'Your name': ['Dein Name', 'Votre nom', 'Tu nombre', 'Il tuo nome', 'Numele tău'],
+  'Your email': ['Deine E-Mail-Adresse', 'Votre e-mail', 'Tu correo electrónico', 'La tua email', 'Adresa ta de email'],
+  'Continue': ['Weiter', 'Continuer', 'Continuar', 'Continua', 'Continuă'],
+  'I agree that the host of this event may contact me by email.': ['Ich bin einverstanden, dass mich der Gastgeber dieser Veranstaltung per E-Mail kontaktiert.', 'J’accepte que l’organisateur de cet événement me contacte par e-mail.', 'Acepto que el anfitrión de este evento me contacte por correo electrónico.', 'Accetto che l’organizzatore di questo evento mi contatti via email.', 'Sunt de acord ca gazda acestui eveniment să mă contacteze prin email.'],
   // Photos to phones: the sheet with the QR code, and the page on the guest's phone
   'Scan to get your photo': ['Scannen und Foto mitnehmen', 'Scannez pour obtenir votre photo', 'Escanea para llevarte tu foto', 'Scansiona per avere la tua foto', 'Scanează ca să-ți iei fotografia'],
   'QR code for your photo': ['QR-Code für dein Foto', 'Code QR de votre photo', 'Código QR de tu foto', 'Codice QR della tua foto', 'Cod QR pentru fotografia ta'],

@@ -47,6 +47,7 @@
       "cameras.js",
       "local-share.js",
       "i18n.js",
+      "guests.js",
       "update.js",
       "update-ui.js",
       "vendor/faceswap/**",

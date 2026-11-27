@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('booth', {
   switchEvent: id => ipcRenderer.invoke('events:switch', id),
   removeEvent: id => ipcRenderer.invoke('events:remove', id),
   logSession: entry => ipcRenderer.invoke('session:log', entry),
+  saveGuest: guest => ipcRenderer.invoke('guest:save', guest),
   listImages: kind => ipcRenderer.invoke('images:list', kind),
   listLuts: () => ipcRenderer.invoke('luts:list'),
   shareBase: () => ipcRenderer.invoke('share:base'), // where this session's share link starts ('' when sharing is off)

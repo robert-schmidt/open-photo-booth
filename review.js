@@ -579,7 +579,7 @@ const Review = (() => {
   $('#drawClear').onclick = () => { strokes = []; dirty = true; flatten() }
   $('#aiSkip').onclick = () => { aiJob++; busy(null) }
   $('#print').onclick = () => finish(true)
-  $('#done').onclick = () => finish()
+  $('#done').onclick = () => { finish(); if (settings.guestForm === 'after' && screen() === 'attract') Guests.ask() }
   $('#allPhotos').onclick = () => select(null)
   // Any touch or key while reviewing restarts the countdown (the share sheet sits outside #review, so listen on the page).
   document.addEventListener('pointerdown', () => { if (screen() === 'review') poke() })

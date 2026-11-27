@@ -30,8 +30,9 @@ const Capture = (() => {
   }
 
   // A tap on the start screen, or Space/Enter: with several modes the guest picks a button, so only one mode starts directly.
-  function start(mode = enabled().length === 1 ? enabled()[0][0] : null) {
+  async function start(mode = enabled().length === 1 ? enabled()[0][0] : null) {
     if (!mode || screen() !== 'attract') return
+    if (settings.guestForm === 'before' && !(await Guests.ask())) return
     if (mode === 'photo') return startSession()
     if (!stream || !video.videoWidth) return toast(tr('Camera is starting, try again in a moment.'))
     ;(mode === 'boomerang' ? boomerang() : message()).catch(e => {
@@ -281,7 +282,7 @@ const Capture = (() => {
     show('attract')
   }
 
-  $('#clipDone').onclick = () => finish()
+  $('#clipDone').onclick = () => { finish(); if (settings.guestForm === 'after' && screen() === 'attract') Guests.ask() }
   $('#clipPrint').onclick = () => finish(true)
   $('#clipShare').onclick = () => Review.share(true)
   $('#clipRetake').onclick = () => {

@@ -396,6 +396,37 @@ try {
   assert.deepEqual(await speak('de', 'Touch to start'), ['de', 'Zum Starten tippen'])
   assert.deepEqual(await speak('de', 'Los!'), ['de', 'Los!'])
   assert.deepEqual(await speak('en', 'Touch to start'), ['en', 'Touch to start'])
+  // Guests' details: the form comes before the photos, typed on the booth's own keyboard. An email address needs to
+  // be one and needs the tick; what was sent is in the event's guests.csv, and the photos follow.
+  await evaluate(`booth.saveSettings({ ...settings, guestForm: 'before', formQuestion: 'Whose side?', formChoices: 'Bride, Groom' }).then(s => { settings = s; return applySettings() })`)
+  await evaluate(`void Capture.start('photo')`) // not waited for: it ends when the session does
+  await until(`screen() === 'guest' && document.activeElement.id === 'askName' && document.querySelectorAll('#askChoices button').length === 2`)
+  const type = async text => { for (const k of text) await evaluate(`[...document.querySelectorAll('#askKeys button')].find(b => b.textContent === '${k}').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }))`) }
+  const send = () => evaluate(`document.querySelector('#askForm').requestSubmit(); [...document.querySelectorAll('#askForm .need')].map(e => e.id || e.className).join()`)
+  await type('⇧ana')
+  await evaluate(`document.querySelector('#askEmail').focus()`)
+  await type('ana@x')
+  assert.deepEqual(await evaluate(`[document.querySelector('#askName').value, document.querySelector('#askEmail').value]`), ['Ana', 'ana@x'])
+  assert.equal(await send(), 'askEmail', 'not an email address yet')
+  await type('y⌫.ro')
+  assert.equal(await send(), 'tick need', 'an address needs the tick')
+  await clean(); await shot('guest-details.jpg')
+  await evaluate(`document.querySelector('#askAgree').click(); document.querySelector('#askChoices button').click()`)
+  await until('video.videoWidth > 0') // the camera restarted with the settings above
+  assert.equal(await send(), '')
+  await until('screen() === "review"', 40000)
+  assert.equal(await evaluate('Guests.answer()'), 'Bride')
+  await evaluate('current.saved')
+  const guestList = (await fs.readFile(path.join(outDir, await evaluate('settings.eventName'), 'guests.csv'), 'utf8')).split('\r\n')
+  assert.equal(guestList[0], '\ufeff"Time","Name","Email","Agreed to","Question","Answer"')
+  assert.ok(guestList[1].endsWith(',"Ana","ana@x.ro","I agree that the host of this event may contact me by email.","Whose side?","Bride"'), guestList[1])
+  // After the photos instead: Done brings the form, and Skip leaves nothing behind.
+  await evaluate(`settings.guestForm = 'after'; document.querySelector('#done').click()`)
+  await until(`screen() === 'guest'`)
+  await evaluate(`document.querySelector('#askSkip').click()`)
+  await until(`screen() === 'attract'`)
+  assert.equal((await fs.readFile(path.join(outDir, await evaluate('settings.eventName'), 'guests.csv'), 'utf8')).split('\r\n').length, 3, 'one guest, and the line end after them')
+  await evaluate(`booth.saveSettings({ ...settings, guestForm: 'off', formQuestion: '', formChoices: '' }).then(s => { settings = s; return applySettings() })`)
   await evaluate(`booth.saveSettings({ ...settings, lutDir: '', attractDir: '', attractOwn: false, guestDraw: false }).then(s => { settings = s; return applySettings() })`)
   await until(`document.querySelector('#slides').hidden && !FILTERS['lut:Rotated']`)
   console.log('looks, pictures, drawing and sharing ok')

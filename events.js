@@ -101,6 +101,25 @@ async function log(s, entry) {
   await fs.appendFile(path.join(d, 'sessions.jsonl'), JSON.stringify({ at: new Date().toISOString(), ...entry }) + '\n')
 }
 
+// Guests' details (guests.js): one row per guest in guests.csv in the event's folder. An email address is kept only
+// if it looks like one and the guest ticked the box, and then the sentence they agreed to is kept with it. A cell that
+// a spreadsheet would run as a formula gets an apostrophe in front.
+const cell = v => {
+  const s = String(v ?? '').slice(0, 500).replace(/\s+/g, ' ').trim()
+  return `"${(/^[=+\-@]/.test(s) ? `'${s}` : s).replaceAll('"', '""')}"`
+}
+const GUEST_HEAD = ['Time', 'Name', 'Email', 'Agreed to', 'Question', 'Answer']
+function guestRow(s, g, at = new Date()) {
+  const email = g.consent === true && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(g.email ?? '').trim()) ? g.email : ''
+  return [at.toISOString(), g.name, email, email ? s.formConsent : '', g.answer ? s.formQuestion : '', g.answer].map(cell).join(',')
+}
+async function guest(s, g) {
+  const d = await dir(s), file = path.join(d, 'guests.csv')
+  await fs.mkdir(d, { recursive: true })
+  // The mark at the start is what makes Excel read the file as UTF-8.
+  await fs.appendFile(file, ((await exists(file)) ? '' : `\ufeff${GUEST_HEAD.map(cell).join(',')}\r\n`) + guestRow(s, g) + '\r\n')
+}
+
 async function list(outputDir) {
   const store = await load()
   const events = await Promise.all(store.events.map(async e => {
@@ -112,4 +131,4 @@ async function list(outputDir) {
   return { activeId: find(store).id, events }
 }
 
-module.exports = { machine, merge, update, create, activate, remove, dir, log, list }
+module.exports = { machine, merge, update, create, activate, remove, dir, log, list, guest, guestRow }

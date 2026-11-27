@@ -18,6 +18,7 @@ const dataUrl = async file => `data:${MIME[path.extname(file).toLowerCase()] || 
 const defaults = () => ({
   eventName: 'My Event', startText: 'Touch to start', cameraId: '', micId: '', mirror: true, templateId: 'builtin:classic-strip', filter: 'none',
   countdown: 3, betweenShots: 2, reviewSeconds: 45, enhance: true, guestRetake: true, guestLooks: true, guestStickers: true, stickerDir: '', glam: 'light', noBlink: true, guestBackgrounds: true, backgroundDir: '', background: 'none', lutDir: '', attractDir: '', attractOwn: false, lang: 'en', guestDraw: false, localShare: false,
+  guestForm: 'off', formName: true, formEmail: true, formQuestion: '', formChoices: '', formConsent: 'I agree that the host of this event may contact me by email.',
   modePhoto: true, modeBoomerang: false, modeVideo: false, videoSeconds: 10, greenScreen: false, chromaTolerance: 50, guestSwap: false, swapDir: '', swapLive: false,
   outputDir: path.join(app.getPath('pictures'), 'Open Photo Booth'),
   printer: '', copies: 1, autoPrint: false, print2up: true, kiosk: false, pin: '', autoUpdate: true,
@@ -179,6 +180,7 @@ ipcMain.handle('camera:props', () => Cameras.props())
 ipcMain.handle('camera:set', (_e, key, index) => Cameras.set(String(key), Number(index)))
 ipcMain.handle('camera:sim', (_e, what) => Cameras.sim(String(what)))
 ipcMain.handle('session:log', async (_e, entry) => Events.log(await readSettings(), { ...entry }))
+ipcMain.handle('guest:save', async (_e, guest) => Events.guest(await readSettings(), { ...guest }))
 ipcMain.handle('templates:list', listTemplates)
 ipcMain.handle('templates:import', async () => {
   const r = await dialog.showOpenDialog(win, { title: 'Choose a folder containing template.xml', properties: ['openDirectory'] })

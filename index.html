@@ -20,7 +20,28 @@
   .screen { position: fixed; inset: 0; display: none; }
   body[data-screen="attract"] #attract, body[data-screen="capture"] #capture,
   body[data-screen="review"] #review, body[data-screen="clip"] #clip, body[data-screen="editor"] #editor,
-  body[data-screen="welcome"] #welcome { display: grid; }
+  body[data-screen="welcome"] #welcome, body[data-screen="guest"] #guest { display: grid; }
+  /* Guests' details (guests.js) */
+  #guest { place-items: center; background: rgba(0,0,0,.72); }
+  .guest { display: grid; gap: min(12px, 1.4vh); width: min(820px, 94vw); max-height: 100vh; overflow-y: auto; padding: min(22px, 2.4vh) 22px; border-radius: 24px; background: #1c1c20; }
+  .guest h2 { margin: 0; font-size: 1.5rem; text-align: center; }
+  .guest .who { display: flex; gap: 14px; }
+  .guest label { display: grid; gap: 4px; flex: 1; font-size: 1rem; }
+  .guest label.tick { grid-template-columns: auto 1fr; align-items: center; gap: 12px; padding: 6px; border-radius: 10px; }
+  .guest input:not([type="checkbox"]) { font-size: 1.3rem; padding: 9px 12px; }
+  .guest .actions button { min-height: min(64px, 9vh); }
+  .guest input[type="checkbox"] { width: 30px; height: 30px; }
+  .guest .need, .guest label.need { outline: 3px solid var(--accent); }
+  .guest [hidden] { display: none; }
+  #askQuestion { margin: 0; font-size: 1.2rem; font-weight: 600; }
+  #askChoices { display: flex; flex-wrap: wrap; gap: 10px; }
+  #askChoices button { font-size: 1.1rem; padding: .5em 1.2em; }
+  #askChoices button[aria-pressed="true"] { background: var(--accent); }
+  .keys { display: grid; gap: 6px; }
+  .keys div { display: flex; gap: 6px; justify-content: center; }
+  .keys button { flex: 1; max-width: 72px; min-height: min(50px, 6.2vh); padding: 0; border-radius: 10px; font-size: 1.25rem; background: #2c2c33; }
+  .keys div:last-child button:last-child { max-width: 300px; flex: 4; }
+  .keys.shift button { text-transform: uppercase; }
 
   #attract { place-items: end center; padding-bottom: 10vh; text-align: center; cursor: pointer;
              background: linear-gradient(to top, rgba(0,0,0,.75), transparent 55%); }
@@ -340,6 +361,19 @@
       </div>
     </aside>
   </section>
+  <section id="guest" class="screen">
+    <form id="askForm" class="guest" novalidate autocomplete="off">
+      <h2 data-tr>A few words about you</h2>
+      <div class="who"><label><span data-tr>Your name</span><input id="askName" maxlength="80"></label>
+      <label><span data-tr>Your email</span><input id="askEmail" type="email" maxlength="120"></label></div>
+      <label class="tick"><input id="askAgree" type="checkbox"><span id="askAgreeText"></span></label>
+      <p id="askQuestion"></p>
+      <div id="askChoices"></div>
+      <input id="askAnswer" maxlength="200" aria-labelledby="askQuestion">
+      <div id="askKeys" class="keys" aria-hidden="true"></div>
+      <div class="actions"><button type="button" id="askSkip" data-tr>Skip</button><button class="primary" data-tr>Continue</button></div>
+    </form>
+  </section>
   <div id="flash"></div>
   <div id="corner" role="button" title="Settings" aria-label="Settings">⚙️</div>
   <div id="settingsHint" class="settings-hint" hidden>Set up your booth here, or press <kbd></kbd> <span>→</span></div>
@@ -418,6 +452,15 @@
         <label for="guestDraw">Guests draw and sign on their photos</label><input id="guestDraw" name="guestDraw" type="checkbox">
         <label for="localShare">Guests get their photo on their phone (QR code, same Wi-Fi)</label><input id="localShare" name="localShare" type="checkbox">
         <span></span><p id="shareStatus" class="hint"></p>
+        <h3>Guest details</h3>
+        <p class="hint span">A short form on the booth's screen: who your guests are, and one question of yours. Guests can always skip it. What they send is saved as <code>guests.csv</code> in the event's photos folder (<b>Open photos</b>), which opens in any spreadsheet.</p>
+        <label for="guestForm">Ask guests</label><select id="guestForm" name="guestForm"><option value="off">Not at all</option><option value="before">Before their photos</option><option value="after">After their photos, when they tap Done</option></select>
+        <label for="formName">Their name</label><input id="formName" name="formName" type="checkbox">
+        <label for="formEmail">Their email address</label><input id="formEmail" name="formEmail" type="checkbox">
+        <label for="formConsent">What they agree to</label><input id="formConsent" name="formConsent" maxlength="200">
+        <span></span><p class="hint">Shown with a box to tick under the email field: an address is only saved with the tick, together with this sentence. Say here what you will use it for; the law in most countries wants that.</p>
+        <label for="formQuestion">Your question</label><input id="formQuestion" name="formQuestion" maxlength="120" placeholder="Optional: How do you know the couple?">
+        <label for="formChoices">Answers to pick from</label><input id="formChoices" name="formChoices" maxlength="300" placeholder="Optional, separated by commas: Bride, Groom, Work. Empty: guests type an answer">
         <h3>Face swap</h3>
         <p class="hint span">Guests put their faces into your scenes: film posters, characters, magazine covers, any picture with a face in it. After their photos, they pick a scene on the editing screen and their face replaces the one in it.</p>
         <label for="guestSwap">Offer face swap to guests</label><input id="guestSwap" name="guestSwap" type="checkbox">
@@ -500,6 +543,7 @@
   <script src="fx.js"></script>
   <script src="enhance.js"></script>
   <script src="review.js"></script>
+  <script src="guests.js"></script>
   <script src="capture.js"></script>
   <script src="swap.js"></script>
   <script src="events-ui.js"></script>

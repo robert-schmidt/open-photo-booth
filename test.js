@@ -155,6 +155,16 @@ assert.equal(E.cube('hello'), null)
   assert.equal(say('xx', 'Done'), 'Done')
 }
 
+// Guests' details (events.js): an email address is kept only with the tick and only if it is one, with the sentence
+// agreed to; nothing a guest types can break the table or run as a formula in a spreadsheet.
+{
+  const { guestRow } = require('./events.js'), s = { formConsent: 'I agree.', formQuestion: 'Whose side?' }, at = new Date(0)
+  assert.equal(guestRow(s, { name: 'Ana', email: 'ana@x.ro', consent: true, answer: 'Bride' }, at), '"1970-01-01T00:00:00.000Z","Ana","ana@x.ro","I agree.","Whose side?","Bride"')
+  assert.equal(guestRow(s, { name: 'Ana', email: 'ana@x.ro', consent: false }, at), '"1970-01-01T00:00:00.000Z","Ana","","","",""', 'no tick, no address')
+  assert.equal(guestRow(s, { email: 'not an address', consent: true }, at).split(',')[2], '""')
+  assert.equal(guestRow(s, { name: '=HYPERLINK("http://x")', answer: 'a\r\n"b",c', consent: 'yes', email: 'a@b.c' }, at), '"1970-01-01T00:00:00.000Z","\'=HYPERLINK(""http://x"")","","","Whose side?","a ""b"",c"')
+}
+
 // Cameras through libgphoto2 (camera-helper/gphoto.cpp), where `npm run build:gphoto` and build:camera have been run:
 // the helper finds libgphoto2's virtual camera, opens it, reads its settings and fetches the photo it "takes".
 {

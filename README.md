@@ -150,6 +150,7 @@ Open settings with the **⚙️ in the top-right corner of the start screen** or
 | **Event name** | Shown on the start screen, used for `{event}` in layouts and in the name of this event's photo folder |
 | **Start button text** | The text on the start button ("Touch to start", "Tap for photos!", in any language) |
 | **Guests' language** | The guests' screens in English, German, French, Spanish, Italian or Romanian, per event: buttons, hints, the countdown texts and the page a QR code opens on a phone. Your own texts stay as typed, and the settings stay in English. |
+| **Guest details** | A short form on the booth's screen, before or after the photos: a name, an email address and one question of yours, typed or picked from your answers. It has its own on-screen keyboard, guests can always skip it, and an email address is only kept with a tick under the sentence you wrote for it. Everything goes to `guests.csv` in the event's photos folder, ready for a spreadsheet. |
 | **Start screen pictures** | A folder of images shown on the start screen in place of the camera view: one is a background, several play as a slideshow until a guest starts. (Not with live face swap characters, where guests need to see themselves) |
 | **Camera** | Which camera to use. A camera the booth controls is marked *controlled over USB*; the line below says what the camera in use delivers, and **Test shot** takes one photo with it |
 | **Microphone** | For video messages |
@@ -380,7 +381,7 @@ With **Guests get their photo on their phone** on, the booth runs a small web se
 
 ## Privacy
 
-Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. It makes two kinds of network connection, both to this project's GitHub page: it asks for new versions every few hours (turn off **Get new versions automatically** to stop that), and if you turn on face swap, it downloads the face swap models once. Sharing to phones, if you turn it on, answers phones on your own network and reaches nothing outside it. Nothing is ever uploaded. Every effect, including background removal and face swap, runs on the booth itself, so no photo ever leaves it. Photos, settings and layouts are stored only on your computer, in the folders listed above. Delete them whenever you like.
+Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. It makes two kinds of network connection, both to this project's GitHub page: it asks for new versions every few hours (turn off **Get new versions automatically** to stop that), and if you turn on face swap, it downloads the face swap models once. Sharing to phones, if you turn it on, answers phones on your own network and reaches nothing outside it. Nothing is ever uploaded. Every effect, including background removal and face swap, runs on the booth itself, so no photo ever leaves it. Photos, settings and layouts are stored only on your computer, in the folders listed above. Delete them whenever you like. If you ask guests for their details, their answers are in the event's `guests.csv`, on your computer only: what you do with those names and addresses is your responsibility as the host, and the sentence guests tick should say it.
 
 ## Troubleshooting
 
