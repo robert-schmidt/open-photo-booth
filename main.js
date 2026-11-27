@@ -289,6 +289,8 @@ app.whenReady().then(async () => {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.loadURL('app://booth/index.html')
   Update.start(win, (await readSettings()).autoUpdate)
+  LocalShare.keep(path.join(app.getPath('userData'), 'shares.json'))
+  localBase() // links handed out before a restart work again at once
   if (process.env.BOOTH_BACKGROUND) win.showInactive() // shown, but your typing doesn't land in it
 })
 app.on('window-all-closed', () => app.quit())

@@ -373,7 +373,7 @@ With **Guests get their photo on their phone** on, the booth runs a small web se
 
 - **Same network.** The phone must be on the same Wi-Fi as the computer. A venue's guest Wi-Fi often keeps devices from seeing each other; your own travel router, or the computer's hotspot, always works. Neither needs internet.
 - **The first time**, macOS or Windows may ask whether the app may accept incoming connections: allow it.
-- **What can be reached:** only photos and clips of sessions from this run of the app, each behind a link with a random 12-character key. No other file on the computer. The links stop working when the app closes, and the pages are plain HTTP, readable by whoever runs the network.
+- **What can be reached:** only photos and clips of sessions taken since sharing was turned on, each behind a link with a random 12-character key. No other file on the computer. The links stop working when you turn sharing off (restarting the app keeps them), and the pages are plain HTTP, readable by whoever runs the network.
 - The settings say which address phones reach the booth at, or that the computer isn't on a network.
 
 ## Privacy
@@ -450,7 +450,7 @@ The app is deliberately small and dependency-free at runtime:
 | `events.js`, `events-ui.js` | Events: each one's settings, folder and session log (main process), and the picker in the settings |
 | `setup.js` | The setup guide |
 | `review.js` | The editing screen: looks, retake, backgrounds, face swap, stickers and props, drawing, the share sheet |
-| `local-share.js` | Main process: the web server that hands photos to phones on the local network |
+| `local-share.js` | Main process: the web server that hands photos to phones on the local network (its links are kept in `shares.json`, so they outlive a restart) |
 | `update.js`, `update-ui.js` | Automatic updates: the check and download (main process), and their line in the settings |
 | `capture.js` | Boomerangs and video messages |
 | `enhance.js`, `fx.js` | Auto-enhance and `.cube` colour tables; WebGL effects: glam, backgrounds, green screen, comic and sketch |

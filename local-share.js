@@ -8,9 +8,11 @@ const path = require('node:path')
 
 const TYPES = { '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.webm': 'video/webm' }
 const HEAD = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'content-security-policy': "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'" }
-// ponytail: kept in memory, so links stop working when the app closes; write them to disk if guests ask the day after.
+// The links and the server's port are also kept in a file (keep), so a QR code scanned before the app was restarted
+// still opens its photo afterwards, as long as the computer has the same address on the network.
 const photos = new Map() // key -> { file, event }
 let server = null // a promise of the listening server, once sharing is first used
+let port = 0, store = null
 
 // This computer's address on the local network: a private IPv4 one (Wi-Fi or cable) if there is one.
 function address() {
@@ -47,10 +49,22 @@ function handle(req, res) {
   })
 }
 
+// Names the file the links are kept in between runs, and reads what the last run left there.
+function keep(file) {
+  store = file
+  try {
+    const s = JSON.parse(fs.readFileSync(file, 'utf8'))
+    port = Number.isInteger(s.port) ? s.port : 0
+    for (const [key, p] of s.photos) if (/^[a-z0-9]{12}$/.test(key) && TYPES[path.extname(String(p.file))]) photos.set(key, { file: p.file, event: String(p.event) })
+  } catch {} // no file yet, or not one of ours: start empty
+}
+const save = async () => { if (store) await fs.promises.writeFile(store, JSON.stringify({ port, photos: [...photos] })).catch(e => console.warn('Sharing:', e.message)) }
+
 // Where a key's page is: http://<this computer>:<port>/p/ (the key goes on the end), or '' when the computer isn't
-// on a network. Starts the server at first use, on a port the system picks.
+// on a network. Starts the server at first use: on the port it had last time if that's free, else on one the system picks.
 async function base() {
-  server ??= new Promise((resolve, reject) => { const s = http.createServer(handle); s.once('error', reject).listen(0, () => resolve(s)) })
+  const listen = p => new Promise((resolve, reject) => { const s = http.createServer(handle); s.once('error', reject).listen(p, () => resolve(s)) })
+  server ??= listen(port).catch(() => listen(0)).then(s => { if (port !== s.address().port) { port = s.address().port; save() } return s })
   const s = await server.catch(e => { server = null; console.warn('Sharing:', e.message) }), ip = address()
   return s && ip ? `http://${ip}:${s.address().port}/p/` : ''
 }
@@ -59,12 +73,15 @@ async function base() {
 function add(key, file, event) {
   photos.set(key, { file, event })
   if (photos.size > 5000) photos.delete(photos.keys().next().value)
+  return save()
 }
 
 function stop() {
   server?.then(s => { s.close(); s.closeAllConnections() }, () => {})
   server = null
+  port = 0
   photos.clear()
+  if (store) fs.rm(store, { force: true }, () => {})
 }
 
-module.exports = { base, add, stop }
+module.exports = { keep, base, add, stop }

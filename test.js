@@ -105,6 +105,24 @@ assert.ok(swapped.data.every((v, i) => Math.abs(v - ramp().data[i % 4 === 0 ? i 
 assert.equal(E.cube(cubeText(3, (r, g, b) => [r, g, b]).split('\n').slice(0, -1).join('\n')), null, 'a table with a row missing is refused')
 assert.equal(E.cube('hello'), null)
 
+// Photos to phones: a link handed out before the app restarts still opens its photo afterwards (two runs of
+// local-share.js, sharing one file).
+{
+  const { execFileSync } = require('node:child_process'), os = require('node:os')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'share-')), photo = path.join(dir, 'p.jpg'), key = 'abcdefghijkl'
+  fs.writeFileSync(photo, 'not really a photo')
+  const run = code => execFileSync(process.execPath, ['-e', `(async () => { const S = require(${JSON.stringify(path.join(__dirname, 'local-share.js'))}); S.keep(${JSON.stringify(path.join(dir, 'shares.json'))}); const base = await S.base(); ${code} })()`], { encoding: 'utf8' })
+  const first = run(`await S.add('${key}', ${JSON.stringify(photo)}, 'Gala'); console.log(base); process.exit()`).trim()
+  if (first) {
+    const [again, body] = run(`console.log(base); console.log(await fetch(base.replace('/p/', '/f/') + '${key}').then(r => r.text())); process.exit()`).trim().split('\n')
+    assert.equal(again, first, 'the same address after a restart')
+    assert.equal(body, 'not really a photo', 'and the photo is still behind its link')
+  } else console.log('(no network on this computer: sharing after a restart is not checked)')
+  fs.writeFileSync(path.join(dir, 'shares.json'), JSON.stringify({ port: 0, photos: [['../../etc', { file: '/etc/passwd', event: 'x' }], [key, { file: '/etc/passwd', event: 'x' }]] }))
+  assert.equal(run(`console.log(await fetch(base.replace('/p/', '/f/') + '${key}').then(r => r.status, () => 'no network')); process.exit()`).trim().replace('no network', '404'), '404', 'a links file with other kinds of files in it is not served')
+  fs.rmSync(dir, { recursive: true })
+}
+
 // main.js keeps a downloaded face swap model only if it has the fingerprint browser-inswapper checks before using it.
 const lib = fs.readFileSync(path.join(__dirname, 'node_modules/browser-inswapper/src/models.ts'), 'utf8'), main = fs.readFileSync(path.join(__dirname, 'main.js'), 'utf8')
 for (const k of ['swapperFp16', 'swapperFp32', 'arcface']) assert.ok(main.includes(new RegExp(`${k}: '([0-9a-f]{64})'`).exec(lib)[1]), `main.js has ${k}'s fingerprint`)

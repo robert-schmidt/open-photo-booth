@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **The event's own photos on the start screen.** With it on for an event, its newest twelve photos play as a slideshow until a guest starts, after your own start screen pictures if there are any.
 - **`.cube` looks on boomerangs and videos**, not just photos.
 
+### Changed
+
+- **Photos to phones: a QR code scanned before the app was restarted still works afterwards**, as long as the computer keeps its address on the network. The links used to end when the app closed.
+
 ## [0.4.1] - 2026-11-26
 
 ### Added
