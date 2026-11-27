@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
+- **New versions are announced, not installed by themselves.** The app still looks for a new version every few hours, but now only tells you: in the settings, and with a dot on the ⚙️ of the start screen. **Update to …** there downloads it, installs it and restarts the app when it suits you, and **Look now** asks at once. Installing by itself is a setting you turn on, **Install new versions automatically**, and it is off for everyone after this update, whatever the old setting was.
 - **Photos to phones: a QR code scanned before the app was restarted still works afterwards**, as long as the computer keeps its address on the network. The links used to end when the app closed.
 
 ## [0.4.1] - 2026-11-26

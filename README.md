@@ -176,7 +176,8 @@ Open settings with the **⚙️ in the top-right corner of the start screen** or
 | **Print automatically** | Prints every session without anyone pressing Print |
 | **Print strips 2-up (4×6)** | Prints a 2×6 strip twice side by side on 4×6 paper, ready to cut in half |
 | **Fullscreen kiosk** | Locks the booth fullscreen. Use **Quit** in settings to close the app |
-| **Get new versions automatically** | On by default: every few hours the app asks this project's GitHub releases for a new version, downloads it, and installs it once the start screen has been untouched for 15 minutes (or when you quit). Never during a session. Turn it off for a booth that must not change mid-season; it counts from the next start |
+| **New versions** | Every few hours the app asks this project's GitHub releases whether there is a new version. When there is, the settings say so (and the ⚙️ on the start screen gets a dot), and **Update to …** downloads it, installs it and restarts the app: about a minute, at a time you choose. Nothing changes on the booth until you press it |
+| **Install new versions automatically** | Off by default. On: a new version is also downloaded by itself and installed once the start screen has been untouched for 15 minutes (or when you quit). Never during a session |
 | **Settings PIN** | If set, the PIN is required to open settings; leave empty to disable |
 
 The camera, microphone, printer, photos folder, kiosk mode and PIN belong to the computer; everything else is kept per event.
@@ -381,7 +382,7 @@ With **Guests get their photo on their phone** on, the booth runs a small web se
 
 ## Privacy
 
-Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. It makes two kinds of network connection, both to this project's GitHub page: it asks for new versions every few hours (turn off **Get new versions automatically** to stop that), and if you turn on face swap, it downloads the face swap models once. Sharing to phones, if you turn it on, answers phones on your own network and reaches nothing outside it. Nothing is ever uploaded. Every effect, including background removal and face swap, runs on the booth itself, so no photo ever leaves it. Photos, settings and layouts are stored only on your computer, in the folders listed above. Delete them whenever you like. If you ask guests for their details, their answers are in the event's `guests.csv`, on your computer only: what you do with those names and addresses is your responsibility as the host, and the sentence guests tick should say it.
+Open Photo Booth has **no accounts, no cloud, no analytics and no telemetry**. It makes two kinds of network connection, both to this project's GitHub page: it asks every few hours whether there is a new version (it downloads one only when you start the update, or have turned automatic installing on), and if you turn on face swap, it downloads the face swap models once. Sharing to phones, if you turn it on, answers phones on your own network and reaches nothing outside it. Nothing is ever uploaded. Every effect, including background removal and face swap, runs on the booth itself, so no photo ever leaves it. Photos, settings and layouts are stored only on your computer, in the folders listed above. Delete them whenever you like. If you ask guests for their details, their answers are in the event's `guests.csv`, on your computer only: what you do with those names and addresses is your responsibility as the host, and the sentence guests tick should say it.
 
 ## Troubleshooting
 
@@ -457,7 +458,7 @@ The app is deliberately small and dependency-free at runtime:
 | `setup.js` | The setup guide |
 | `review.js` | The editing screen: looks, retake, backgrounds, face swap, stickers and props, drawing, the share sheet |
 | `local-share.js` | Main process: the web server that hands photos to phones on the local network (its links are kept in `shares.json`, so they outlive a restart) |
-| `update.js`, `update-ui.js` | Automatic updates: the check and download (main process), and their line in the settings |
+| `update.js`, `update-ui.js` | Updates: the check, and the download when the operator starts it or has automatic installing on (main process); their lines in the settings |
 | `capture.js` | Boomerangs and video messages |
 | `enhance.js`, `fx.js` | Auto-enhance and `.cube` colour tables; WebGL effects: glam, backgrounds, green screen, comic and sketch |
 | `ai.js` | On-device face and person detection with MediaPipe (bundled, offline) |

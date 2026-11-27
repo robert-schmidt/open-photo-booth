@@ -26,6 +26,7 @@ const log = async dir => (await fs.readFile(path.join(dir, 'sessions.jsonl'), 'u
 // Without it the face swap checks are skipped, and the address leads nowhere: the tests never use the network.
 process.env.BOOTH_MODELS = pathToFileURL(process.env.BOOTH_FACE_MODELS || path.join(tmp, 'no-models')).href
 // A stand-in update server. It offers version 99.0.0, whose download fails its checksum on purpose, so nothing installs.
+// updateHits: what was asked of it.
 const updateHits = [], badSha = `${'A'.repeat(86)}==`
 const updates = http.createServer((req, res) => {
   const file = new URL(req.url, 'http://x').pathname // the updater adds ?noCache=…
@@ -737,16 +738,35 @@ try {
   if (!built) { // a built app asks where its releases are published, not the stand-in
     const { version, productName } = JSON.parse(await fs.readFile(path.join(import.meta.dirname, 'package.json'), 'utf8'))
     assert.equal(await evaluate(`document.querySelector('#version').textContent`), `${productName} ${version}`)
+    // A new version is only announced: in the settings, on a line under their sections, and as a dot on the ⚙️.
+    const downloads = () => updateHits.filter(u => /Booth-99\.0\.0-(mac-(arm64|x64)\.zip|win-x64\.exe)$/.test(u)).length
+    await until(`booth.update.status().then(s => s.state === 'available' && s.version === '99.0.0')`, 30000)
+    assert.ok(await evaluate('settings.autoInstall === false'), 'nothing installs by itself unless the operator asks for that')
+    assert.equal(downloads(), 0, 'nothing is downloaded before the operator says so')
+    assert.deepEqual(await evaluate(`[document.querySelector('#corner').classList.contains('news'), document.querySelector('#updateNews').hidden, document.querySelector('#updateNews').textContent, document.querySelector('#updateNow').textContent, document.querySelector('#updateCheck').hidden]`), [true, false, `⬇ ${productName} 99.0.0 is out`, 'Update to 99.0.0', true])
+    await evaluate(`document.querySelector('#updateNews').click()`)
+    assert.ok(await evaluate(`!!document.querySelector('#updateNow').offsetParent`), 'the line leads to the update')
+    await clean(); await shot('settings-update.jpg')
+    // The operator starts it: it is downloaded and its checksum checked (this one fails, so nothing installs).
+    await evaluate(`document.querySelector('#updateNow').click()`)
     await until(`booth.update.status().then(s => s.state === 'failed' && s.version === '99.0.0')`, 30000)
-    assert.ok(updateHits.some(u => /Booth-99\.0\.0-(mac-(arm64|x64)\.zip|win-x64\.exe)$/.test(u)), `the update was downloaded: ${updateHits}`)
+    assert.equal(downloads(), 1, `the update was downloaded: ${updateHits}`)
     assert.match(await evaluate(`document.querySelector('#updateStatus').textContent`), /tries again/)
+    assert.deepEqual(await evaluate(`[document.querySelector('#corner').classList.contains('news'), document.querySelector('#updateNow').hidden, document.querySelector('#updateCheck').hidden]`), [false, true, false])
+    // "Look now" finds it again, and still only announces it. With automatic installing on, its download starts by itself.
+    await evaluate(`document.querySelector('#updateCheck').click()`)
+    await until(`booth.update.status().then(s => s.state === 'available')`, 30000)
+    assert.equal(downloads(), 1)
+    await evaluate(`booth.saveSettings({ ...settings, autoInstall: true }).then(s => { settings = s })`)
+    await until(`booth.update.status().then(s => s.state === 'failed')`, 30000)
+    assert.equal(downloads(), 2, 'automatic: downloaded without being asked')
+    await evaluate(`booth.saveSettings({ ...settings, autoInstall: false }).then(s => { settings = s })`)
     await evaluate(`document.querySelector('dialog[open]')?.close(); show('attract'); Update.set({ state: 'ready', version: '99.0.1' })`)
     assert.ok(!(await evaluate('Update.tick(Date.now())')), 'not right after a touch')
     assert.ok(await evaluate('Update.tick(Date.now() + 16 * 60000)'), 'after 15 quiet minutes on the start screen')
     await evaluate(`show('review')`)
     assert.ok(!(await evaluate('Update.tick(Date.now() + 16 * 60000)')), 'never mid-session')
     await evaluate(`show('attract'); Update.set({ state: 'latest' })`)
-    assert.ok(await evaluate('settings.autoUpdate === true'), 'updates are on unless the operator turns them off')
     console.log('updates ok')
   }
 

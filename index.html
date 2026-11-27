@@ -204,6 +204,8 @@
   #settingsForm .side { grid-area: side; padding: 22px 12px; background: rgba(0,0,0,.28); overflow-y: auto; }
   #settingsForm .side h2 { margin: 0 10px 14px; }
   #settingsNav { display: grid; gap: 2px; }
+  #updateNews { margin-top: 14px; padding: 8px 12px; border-radius: 10px; font-size: .9rem; background: var(--accent); white-space: normal; text-align: left; }
+  #corner.news::after { content: ""; position: absolute; top: 2px; right: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); border: 2px solid #000; }
   #settingsNav button { display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: 10px; background: none; color: #c9c9d1; font-size: .98rem; text-align: left; white-space: nowrap; }
   #settingsNav button:hover { background: rgba(255,255,255,.06); }
   #settingsNav button[aria-current] { background: rgba(255,255,255,.12); color: #fff; font-weight: 600; }
@@ -389,7 +391,7 @@
 
   <dialog id="settings">
     <form id="settingsForm" method="dialog">
-      <div class="side"><h2>Settings</h2><nav id="settingsNav" aria-label="Settings sections"></nav></div>
+      <div class="side"><h2>Settings</h2><nav id="settingsNav" aria-label="Settings sections"></nav><button type="button" id="updateNews" hidden></button></div>
       <div class="grid">
         <h3>Event</h3>
         <label for="eventId">Event</label>
@@ -479,10 +481,10 @@
         <label for="pin">Settings PIN</label><input id="pin" name="pin" type="password" inputmode="numeric" placeholder="Leave empty for no PIN" autocomplete="off">
         <label for="kiosk">Fullscreen kiosk</label><input id="kiosk" name="kiosk" type="checkbox">
         <h3>About</h3>
-        <label>Version</label><div class="row"><span id="version"></span><button type="button" id="updateNow" hidden>Restart and update</button></div>
+        <label>Version</label><div class="row"><span id="version"></span><button type="button" id="updateNow" hidden>Restart and update</button><button type="button" id="updateCheck" hidden>Look now</button></div>
         <span></span><p id="updateStatus" class="hint"></p>
-        <label for="autoUpdate">Get new versions automatically</label><input id="autoUpdate" name="autoUpdate" type="checkbox">
-        <span></span><p class="hint">The app then asks where its releases are published for a new version every few hours, downloads it and installs it when nobody is using the booth. A change here counts from the next time the app starts.</p>
+        <label for="autoInstall">Install new versions automatically</label><input id="autoInstall" name="autoInstall" type="checkbox">
+        <span></span><p class="hint">Off: the app asks every few hours whether there is a new version, tells you here, and you start the update when it suits you. On: it also downloads the new version by itself and installs it when nobody is using the booth.</p>
         <label>Source and help</label><div><button type="button" id="repoLink">github.com/robert-schmidt/open-photo-booth ↗</button></div>
         <label>Looking for more?</label><div><button type="button" id="moreLink">Try Boothini ↗</button></div>
         <span></span><p class="hint">Boothini is this booth with online extras: AI magic that turns guests' photos into pop art, anime or an oil painting, and photos to phones from anywhere, by QR code, by email and on an event gallery page. That app is free too: credits pay for the online extras, only when you use them.</p>

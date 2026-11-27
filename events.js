@@ -4,7 +4,7 @@ const fs = require('node:fs/promises')
 const path = require('node:path')
 const { randomUUID } = require('node:crypto')
 
-const MACHINE = ['cameraId', 'micId', 'mirror', 'outputDir', 'printer', 'pin', 'kiosk', 'autoUpdate']
+const MACHINE = ['cameraId', 'micId', 'mirror', 'outputDir', 'printer', 'pin', 'kiosk', 'autoInstall']
 const file = () => path.join(app.getPath('userData'), 'events.json')
 const safe = s => String(s).replace(/[\\/:*?"<>|]+/g, '_').trim() || 'Event'
 const exists = p => fs.stat(p).then(() => true, () => false)

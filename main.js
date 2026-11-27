@@ -21,7 +21,7 @@ const defaults = () => ({
   guestForm: 'off', formName: true, formEmail: true, formQuestion: '', formChoices: '', formConsent: 'I agree that the host of this event may contact me by email.',
   modePhoto: true, modeBoomerang: false, modeVideo: false, videoSeconds: 10, greenScreen: false, chromaTolerance: 50, guestSwap: false, swapDir: '', swapLive: false,
   outputDir: path.join(app.getPath('pictures'), 'Open Photo Booth'),
-  printer: '', copies: 1, autoPrint: false, print2up: true, kiosk: false, pin: '', autoUpdate: true,
+  printer: '', copies: 1, autoPrint: false, print2up: true, kiosk: false, pin: '', autoInstall: false,
 })
 const picked = new Set() // image files the user chose in a dialog; only these may be copied into templates
 const gotLock = app.requestSingleInstanceLock()
@@ -118,6 +118,7 @@ ipcMain.handle('settings:set', async (_e, { swapReady: _ready, ...s }) => {
   await fs.rename(settingsFile() + '.tmp', settingsFile())
   await Events.update(next)
   win.setKiosk(!!next.kiosk)
+  Update.automatic(next.autoInstall)
   await localBase() // sharing starts or stops with the event's setting
   return readSettings()
 })
@@ -291,7 +292,7 @@ app.whenReady().then(async () => {
   win.webContents.on('will-navigate', e => e.preventDefault())
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.loadURL('app://booth/index.html')
-  Update.start(win, (await readSettings()).autoUpdate)
+  Update.start(win, (await readSettings()).autoInstall)
   LocalShare.keep(path.join(app.getPath('userData'), 'shares.json'))
   localBase() // links handed out before a restart work again at once
   if (process.env.BOOTH_BACKGROUND) win.showInactive() // shown, but your typing doesn't land in it
