@@ -239,6 +239,7 @@
   #edProps small { grid-column: 2; color: #777; }
   #edProps .color { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: center; }
   #edProps input[type="color"] { height: 32px; padding: 2px; }
+  #brandColor { width: 90px; height: 36px; padding: 2px; }
   #edProps input[type="range"] { padding: 0; }
   .ed-footer { margin-top: auto; display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; padding-top: 12px; }
   .grid > span:empty:has(+ [hidden]) { display: none; } /* a hidden row's spacer goes too, or the columns slip */
@@ -399,6 +400,8 @@
         <span></span><p id="eventStats" class="hint"></p>
         <label for="eventName">Event name</label><input id="eventName" name="eventName">
         <label for="startTextInput">Start button text</label><input id="startTextInput" name="startText">
+        <label for="brandColor">Your colour</label><input id="brandColor" name="brandColor" type="color">
+        <span></span><p class="hint">The colour of the buttons on the guests' screens, and on the page a QR code opens on their phone.</p>
         <label for="lang">Guests' language</label><select id="lang" name="lang"></select>
         <span></span><p class="hint">What guests read on the booth's screens: the buttons, the hints and the countdown. Your own texts (the event's name, a start button text you typed) stay as you wrote them; these settings stay in English.</p>
         <label for="attractDir">Start screen pictures (image folder)</label>

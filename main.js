@@ -18,7 +18,7 @@ const dataUrl = async file => `data:${MIME[path.extname(file).toLowerCase()] || 
 const defaults = () => ({
   eventName: 'My Event', startText: 'Touch to start', cameraId: '', micId: '', mirror: true, templateId: 'builtin:classic-strip', filter: 'none',
   countdown: 3, betweenShots: 2, reviewSeconds: 45, enhance: true, guestRetake: true, guestLooks: true, guestStickers: true, stickerDir: '', glam: 'light', noBlink: true, guestBackgrounds: true, backgroundDir: '', background: 'none', lutDir: '', attractDir: '', attractOwn: false, lang: 'en', guestDraw: false, localShare: false,
-  guestForm: 'off', formName: true, formEmail: true, formQuestion: '', formChoices: '', formConsent: 'I agree that the host of this event may contact me by email.',
+  brandColor: '#ff4f6d', guestForm: 'off', formName: true, formEmail: true, formQuestion: '', formChoices: '', formConsent: 'I agree that the host of this event may contact me by email.',
   modePhoto: true, modeBoomerang: false, modeVideo: false, videoSeconds: 10, greenScreen: false, chromaTolerance: 50, guestSwap: false, swapDir: '', swapLive: false,
   outputDir: path.join(app.getPath('pictures'), 'Open Photo Booth'),
   printer: '', copies: 1, autoPrint: false, print2up: true, kiosk: false, pin: '', autoInstall: false,
@@ -131,7 +131,7 @@ ipcMain.handle('events:remove', async (_e, id) => { await Events.remove(id); ret
 // photos folder are handed over, so the renderer can't put anything else on the network.
 const localBase = async () => {
   const s = await readSettings()
-  if (s.localShare) return LocalShare.base(s.lang)
+  if (s.localShare) return LocalShare.base(s.lang, s.brandColor)
   LocalShare.stop()
   return ''
 }

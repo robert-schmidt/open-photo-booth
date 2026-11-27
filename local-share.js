@@ -13,7 +13,7 @@ const HEAD = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
 // still opens its photo afterwards, as long as the computer has the same address on the network.
 const photos = new Map() // key -> { file, event }
 let server = null // a promise of the listening server, once sharing is first used
-let port = 0, store = null, lang = 'en' // the event's language for guests: the phone's page speaks it too
+let port = 0, store = null, lang = 'en', color = '#ff4f6d' // the event's language and colour for guests: the phone's page has them too
 
 // This computer's address on the local network: a private IPv4 one (Wi-Fi or cable) if there is one.
 function address() {
@@ -23,7 +23,7 @@ function address() {
 
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
 const page = (title, body, refresh) => `<!doctype html><html lang="${lang}"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${refresh ? '<meta http-equiv="refresh" content="3">' : ''}<title>${esc(title)}</title>
-<style>body{margin:0;min-height:100vh;display:grid;place-content:center;justify-items:center;gap:16px;padding:20px;box-sizing:border-box;background:#111;color:#fff;font:1.1rem system-ui,sans-serif;text-align:center}img,video{max-width:100%;max-height:72vh;border-radius:8px}a{padding:.8em 2em;border-radius:999px;background:#ff4f6d;color:#fff;text-decoration:none;font-weight:600}p{margin:0;color:#bbb}</style>
+<style>body{margin:0;min-height:100vh;display:grid;place-content:center;justify-items:center;gap:16px;padding:20px;box-sizing:border-box;background:#111;color:#fff;font:1.1rem system-ui,sans-serif;text-align:center}img,video{max-width:100%;max-height:72vh;border-radius:8px}a{padding:.8em 2em;border-radius:999px;background:${color};color:#fff;text-decoration:none;font-weight:600}p{margin:0;color:#bbb}</style>
 ${body}`
 
 // /p/<key> is the page a QR code opens; /f/<key> is the photo or clip itself. Before the guest has tapped Done the
@@ -63,8 +63,9 @@ const save = async () => { if (store) await fs.promises.writeFile(store, JSON.st
 
 // Where a key's page is: http://<this computer>:<port>/p/ (the key goes on the end), or '' when the computer isn't
 // on a network. Starts the server at first use: on the port it had last time if that's free, else on one the system picks.
-async function base(speak = 'en') {
+async function base(speak = 'en', accent = '') {
   lang = speak
+  if (/^#[0-9a-f]{6}$/i.test(accent)) color = accent // it goes into the page's style: nothing but a colour
   const listen = p => new Promise((resolve, reject) => { const s = http.createServer(handle); s.once('error', reject).listen(p, () => resolve(s)) })
   server ??= listen(port).catch(() => listen(0)).then(s => { if (port !== s.address().port) { port = s.address().port; save() } return s })
   const s = await server.catch(e => { server = null; console.warn('Sharing:', e.message) }), ip = address()

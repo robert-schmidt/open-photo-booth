@@ -60,6 +60,7 @@ async function loadTemplates() {
 
 async function applySettings() {
   $('#eventTitle').textContent = settings.eventName
+  document.documentElement.style.setProperty('--accent', settings.brandColor)
   translatePage(settings.lang)
   $('#startText').textContent = tr(settings.startText) // "Touch to start" follows the language; a text of the operator's own stays
   await loadTemplates()

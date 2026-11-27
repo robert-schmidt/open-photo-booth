@@ -152,6 +152,7 @@ Open settings with the **⚙️ in the top-right corner of the start screen** or
 | **Event**, **New**, **Remove** | The event in use. **New** starts another one as a copy of the current event and opens the setup guide. **Remove** takes an event off the list; its photos stay |
 | **Event name** | Shown on the start screen, used for `{event}` in layouts and in the name of this event's photo folder |
 | **Start button text** | The text on the start button ("Touch to start", "Tap for photos!", in any language) |
+| **Your colour** | The colour of the buttons on the guests' screens and on the page a QR code opens on their phone, per event |
 | **Guests' language** | The guests' screens in English, German, French, Spanish, Italian or Romanian, per event: buttons, hints, the countdown texts and the page a QR code opens on a phone. Your own texts stay as typed, and the settings stay in English. |
 | **Guest details** | A short form on the booth's screen, before or after the photos: a name, an email address and one question of yours, typed or picked from your answers. It has its own on-screen keyboard, guests can always skip it, and an email address is only kept with a tick under the sentence you wrote for it. Everything goes to `guests.csv` in the event's photos folder, ready for a spreadsheet. |
 | **Start screen pictures** | A folder of images shown on the start screen in place of the camera view: one is a background, several play as a slideshow until a guest starts. (Not with live face swap characters, where guests need to see themselves) |

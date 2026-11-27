@@ -397,6 +397,10 @@ try {
   assert.deepEqual(await speak('de', 'Touch to start'), ['de', 'Zum Starten tippen'])
   assert.deepEqual(await speak('de', 'Los!'), ['de', 'Los!'])
   assert.deepEqual(await speak('en', 'Touch to start'), ['en', 'Touch to start'])
+  // The event's colour is the guests' buttons' colour.
+  const accent = c => evaluate(`booth.saveSettings({ ...settings, brandColor: '${c}' }).then(s => { settings = s; return applySettings() }).then(() => getComputedStyle(document.querySelector('#done')).backgroundColor)`)
+  assert.equal(await accent('#00aa88'), 'rgb(0, 170, 136)')
+  assert.equal(await accent('#ff4f6d'), 'rgb(255, 79, 109)')
   // Guests' details: the form comes before the photos, typed on the booth's own keyboard. An email address needs to
   // be one and needs the tick; what was sent is in the event's guests.csv, and the photos follow.
   await evaluate(`booth.saveSettings({ ...settings, guestForm: 'before', formQuestion: 'Whose side?', formChoices: 'Bride, Groom' }).then(s => { settings = s; return applySettings() })`)
