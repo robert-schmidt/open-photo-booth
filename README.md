@@ -77,7 +77,9 @@ Open Photo Booth is the opposite:
 | **Glam and no-blink** | Light or strong skin smoothing, and the booth keeps the frame where nobody blinked |
 | **Stickers and props** | Emoji and your own PNGs, moved, resized and turned with fingers; glasses, hats and crowns land on every face |
 | **Face swap** | Guests put their faces into your scenes (posters, characters, covers), or become a character live on the start screen. Runs on the booth, after a one-time download of its models, see [Face swap](#face-swap) |
-| **Camera control** | Recent Sony and Nikon Z cameras over USB (beta): live view, the camera's own shutter and flash, full-resolution files |
+| **Camera control** | Recent Sony and Nikon Z cameras over USB (beta): live view, the camera's own shutter and flash, full-resolution files. On macOS, Canon EOS, Nikon DSLRs and older bodies too, through libgphoto2 (experimental) |
+| **Languages** | The guests' screens in English, German, French, Spanish, Italian or Romanian, chosen per event |
+| **Guest details** | An optional short form before or after the photos: name, email and a question of yours, saved as a spreadsheet file per event |
 | **Multi-shot sessions** | The layout decides how many photos are taken (1–N), with a pause between shots |
 | **Layouts** | Classic 2×6 strip, postcard (1 large + 3 small), grid of four and single photo, plus your own |
 | **Layout editor** | Create, edit, duplicate and delete layouts visually: photo slots, text, images/overlays, rectangles and ellipses. Drag to move and resize, adjust colours, opacity, borders, shadows, rotation and layer order, with undo/redo |
@@ -85,6 +87,7 @@ Open Photo Booth is the opposite:
 | **Text placeholders** | `{event}` and `{date}` are filled in automatically; text shrinks to fit its box |
 | **Printing** | Any printer your OS supports (dye-sub, inkjet, laser). Silent printing to a chosen printer, auto-print, copies, and 2×6 strips printed 2-up on 4×6 paper |
 | **Storage** | Each session is saved immediately (individual shots and the final layout) in a dated folder per event, with originals, prints and videos in folders of their own |
+| **Updates** | The app tells you when a new version is out, and updates when you say so; installing by itself is a setting |
 | **Kiosk mode** | Fullscreen, the display never sleeps, settings behind the ⚙️ button and an optional PIN |
 | **Buttons and pedals** | `Space` / `Enter` start a session, so USB foot pedals, arcade buttons and wireless presenters work out of the box |
 | **Other cameras** | Any webcam, or any DSLR/mirrorless camera through its webcam utility or an HDMI capture card |
@@ -457,6 +460,8 @@ The app is deliberately small and dependency-free at runtime:
 | `events.js`, `events-ui.js` | Events: each one's settings, folder and session log (main process), and the picker in the settings |
 | `setup.js` | The setup guide |
 | `review.js` | The editing screen: looks, retake, backgrounds, face swap, stickers and props, drawing, the share sheet |
+| `i18n.js` | The guests' texts in the other languages, and the three small functions that put them on the page |
+| `guests.js` | The guest details form and its on-screen keyboard (its rows go to `guests.csv` through `events.js`) |
 | `local-share.js` | Main process: the web server that hands photos to phones on the local network (its links are kept in `shares.json`, so they outlive a restart) |
 | `update.js`, `update-ui.js` | Updates: the check, and the download when the operator starts it or has automatic installing on (main process); their lines in the settings |
 | `capture.js` | Boomerangs and video messages |
@@ -465,7 +470,7 @@ The app is deliberately small and dependency-free at runtime:
 | `swap.js` | Face swap with browser-inswapper |
 | `camera.js` | The camera in the page: a webcam, or a controlled camera's live view and photos |
 | `cameras.js` | Main process: starts `camera-helper`, relays its frames, restarts it when it crashes or hangs |
-| `camera-helper/` | A small C++ program that talks to the makers' SDKs, one backend per maker (`sony.cpp`, `nikon.cpp`), in a process of its own so an SDK crash can't take the booth down |
+| `camera-helper/` | A small C++ program that talks to the makers' SDKs, one backend per maker (`sony.cpp`, `nikon.cpp`), and to libgphoto2 (`gphoto.cpp`), in a process of its own so a crash there can't take the booth down. `scripts/build-camera.mjs` builds it; `scripts/build-gphoto.mjs` builds libgphoto2 for it |
 | `site/cameras.js` | The list of controlled camera models shown in the settings |
 | `editor.js` | The visual layout editor |
 | `layout.js` | Template model: parse/serialize `template.xml`, colour and fitting maths (shared with tests) |
