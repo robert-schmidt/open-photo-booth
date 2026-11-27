@@ -128,6 +128,7 @@ assert.equal(E.cube('hello'), null)
 // screens show has a row: the ones marked in index.html, the ones the code passes to tr(), and the names of the
 // modes, looks and backdrops (which reach tr() through a variable, so they are listed here).
 {
+  for (const f of fs.readdirSync(__dirname)) if (/^i18n-.+\.js$/.test(f)) require(`./${f}`) // a build with screens of its own adds its rows to the table
   const { LANGS, TEXTS, say } = require('./i18n.js'), holes = s => (s.match(/\{\w+\}/g) || []).sort().join()
   for (const [en, row] of Object.entries(TEXTS)) {
     assert.equal(row.length, Object.keys(LANGS).length - 1, `"${en}" has every language`)

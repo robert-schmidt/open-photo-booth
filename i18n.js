@@ -1,6 +1,7 @@
 // The guests' screens in other languages (Settings → Event → Guests' language). The English text is the key: a text
 // without a row here, or a language without one, shows in English. The operator's settings stay in English.
-// Loaded by the page (LANGS, tr, translatePage) and by local-share.js for the page on a guest's phone (say).
+// Loaded by the page (LANGS, tr, translatePage) and by local-share.js for the page on a guest's phone (say). A build
+// with guest screens of its own adds their rows to TEXTS from a file named i18n-<something>.js (test.js reads those too).
 const LANGS = { en: 'English', de: 'Deutsch', fr: 'Français', es: 'Español', it: 'Italiano', ro: 'Română' }
 // English: [German, French, Spanish, Italian, Romanian], in LANGS' order. Symbols in front of a text (📱, ↻) aren't
 // part of its key: say() keeps them. {n} and the like are filled in by say().
