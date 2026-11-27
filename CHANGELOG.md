@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-27
+
 ### Added
 
 - **Camera control for Canon EOS, Nikon DSLRs, older Sony and more, through libgphoto2 (macOS, experimental).** The open-source library is now part of the Mac app, next to Sony's and Nikon's own SDKs: the cameras it can take photos with show up under **Settings → Camera** as *controlled over USB*. It has only been run against libgphoto2's virtual camera so far, not real bodies: please report how yours does. Builds from source get it with `npm run build:gphoto`.
@@ -132,7 +134,8 @@ First public release.
 - **Input:** `Space`/`Enter` start a session, for USB buttons and foot pedals.
 - **Installers:** macOS (Apple Silicon and Intel, ad-hoc signed) and Windows, built and published by GitHub Actions.
 
-[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/robert-schmidt/open-photo-booth/compare/v0.3.1...v0.3.2
